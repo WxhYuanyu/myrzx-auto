@@ -14,6 +14,7 @@ from src.vision.templates import load_templates  # noqa: E402
 
 FIXTURE_DIR = ROOT / "tests" / "fixtures" / "screens"
 WALKTHROUGH_DIR = ROOT / "tests" / "fixtures" / "walkthrough"
+TURN_IN_DIR = ROOT / "tests" / "fixtures" / "turn_in"
 
 SCREEN_FILES = {
     "world": FIXTURE_DIR / "01_world_allgreen.png",
@@ -54,6 +55,19 @@ WALKTHROUGH_FILES = {
 
 WALKTHROUGH_ORDER = list(WALKTHROUGH_FILES.keys())
 
+TURN_IN_FILES = {
+    "region": TURN_IN_DIR / "01_region_crystia.png",
+    "commission": TURN_IN_DIR / "02_commission_list.png",
+    "after_accept": TURN_IN_DIR / "03_after_accept.png",
+    "city_npc": TURN_IN_DIR / "04_city_npc.png",
+    "story": TURN_IN_DIR / "05_story.png",
+    "city_scroll": TURN_IN_DIR / "06_city_scroll.png",
+    "quest_finish": TURN_IN_DIR / "07_quest_finish.png",
+    "loot": TURN_IN_DIR / "08_loot.png",
+}
+
+TURN_IN_ORDER = list(TURN_IN_FILES.keys())
+
 
 @pytest.fixture(scope="session")
 def templates():
@@ -68,3 +82,8 @@ def screens():
 @pytest.fixture(scope="session")
 def walkthrough():
     return {name: load_bgr(path) for name, path in WALKTHROUGH_FILES.items()}
+
+
+@pytest.fixture(scope="session")
+def turn_in():
+    return {name: load_bgr(path) for name, path in TURN_IN_FILES.items()}

@@ -10,7 +10,9 @@ class Scene(str, Enum):
     """当前能识别的页面。未知或需要下一张尚未收集的截图时用后两个值。"""
 
     WORLD_MAP = "WORLD_MAP"
+    REGION_CRYSTIA = "REGION_CRYSTIA"
     CITY_LILITOS = "CITY_LILITOS"
+    CITY_TURANDON = "CITY_TURANDON"
     ASSOCIATION = "ASSOCIATION"
     COMMISSION_LIST = "COMMISSION_LIST"
     QUEST_DETAIL = "QUEST_DETAIL"
@@ -28,9 +30,11 @@ class Scene(str, Enum):
     def zh_name(self) -> str:
         return {
             Scene.WORLD_MAP: "世界地图（阿格莱恩）",
+            Scene.REGION_CRYSTIA: "克里斯汀（区域地图）",
             Scene.CITY_LILITOS: "王城莉莉托斯（城内节点）",
+            Scene.CITY_TURANDON: "图兰顿沙漠（城内）",
             Scene.ASSOCIATION: "协会室内",
-            Scene.COMMISSION_LIST: "驯养师协会委托中心",
+            Scene.COMMISSION_LIST: "协会委托中心",
             Scene.QUEST_DETAIL: "任务详情",
             Scene.STAGE_MAP: "关卡选择图（1-x）",
             Scene.STAGE_1_3: "莉莉托斯近郊 1-3",

@@ -41,6 +41,12 @@ _TURN_IN_SUMMARY = (
     "仇恨会令我成长 → 接收 → 返回/离开 → 点冒险者的脸 → 跳过剧情 → "
     "任务卷轴 → 标题 → 完成 → 获得物品"
 )
+_MULTI_BATTLE_SUMMARY = (
+    "每日委托：阿格莱恩「前往克里斯汀」→ 图兰顿沙漠 → 协会 → 委托 → "
+    "“热情”的冒险者 → 接收 → 探险 → 9-7 初步探索点「进入」三次"
+    "（事件弹窗不计数）→ 离开 → 回程 → 点冒险者的脸 → 跳过剧情 → "
+    "任务卷轴 → 标题 → 完成 → 获得物品"
+)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -67,7 +73,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
             "牧羊人之心日常自动化（每日委托：类型1「喳喳布林入侵」，"
-            "类型2「仇恨会令我成长」）"
+            "类型2「仇恨会令我成长」，类型3「“热情”的冒险者」）"
         ),
     )
     parser.add_argument(
@@ -91,8 +97,8 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--quest",
         default=config.PRIORITY_COMMISSION,
-        help="委托标题。默认「喳喳布林入侵」。交物品示例：「仇恨会令我成长」。"
-        "未知名称会直接停止，不会编造路线。",
+        help="委托标题。默认「喳喳布林入侵」。交物品：「仇恨会令我成长」。"
+        "多场战斗：「“热情”的冒险者」。未知名称会直接停止，不会编造路线。",
     )
     parser.add_argument(
         "--verbose",
@@ -152,6 +158,8 @@ def _summary_for(quest_name: str) -> str:
     recipe = get_recipe(quest_name)
     if recipe.kind is CommissionKind.TURN_IN:
         return _TURN_IN_SUMMARY
+    if recipe.kind is CommissionKind.MULTI_BATTLE:
+        return _MULTI_BATTLE_SUMMARY
     return _TASK_SUMMARY
 
 
@@ -230,7 +238,7 @@ def _cmd_live() -> int:
     print("顶层: " + found.top_level.brief())
     print("目标: " + found.target.brief())
     print()
-    print("状态机已覆盖「喳喳布林入侵」和交物品「仇恨会令我成长」。")
+    print("状态机已覆盖「喳喳布林入侵」、交物品「仇恨会令我成长」和多场战斗「“热情”的冒险者」。")
     print("请先运行 python main.py --list-windows，以及 --dry-run 验证识别。")
     print("确认窗口后再把真实点击循环接上。未收录的中间页会跳过，不会点「扫荡」。")
     return 0

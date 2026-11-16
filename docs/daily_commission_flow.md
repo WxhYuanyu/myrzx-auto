@@ -1,10 +1,10 @@
 # 每日委托
 
-两条已经走完的委托共用同一组动词，各自只保留一份短配方。未收录的中间页会先跳过。任何阶段都不点「扫荡」。
+三条已经走完的委托共用同一组动词，各自只保留一份短配方。未收录的中间页会先跳过。任何阶段都不点「扫荡」。
 
 画面标题 **喳喳布林入侵** 按原文匹配，不要写成「嗥嗥」或「嗫嗫」。
 
-类型3是另一条委托，走查还在进行。`PENDING_COMMISSIONS` 保持为空，不写阶段，也不放模板。
+类型3「“热情”的冒险者」是多场战斗：图兰顿沙漠地区 9-7-1 打三场正式战斗。事件弹窗不计数。
 
 ## 共用动词
 
@@ -228,7 +228,85 @@ python main.py --dry-run tests/fixtures/walkthrough
 python main.py --dry-run tests/fixtures/turn_in --quest 仇恨会令我成长
 ```
 
-其他委托如果目标或 NPC 不同，需要另行补充截图和配方，不会套用小孩对话或这条冒险者上交流程去点别的委托。类型3等走查结束后再登记。
+其他委托如果目标或 NPC 不同，需要另行补充截图和配方，不会套用小孩对话或这条冒险者上交流程去点别的委托。
+
+## 类型3：「“热情”的冒险者」（多场战斗）
+
+实走帧在 `tests/fixtures/multi_battle/`（1080×1920）。同一张胜利图和选关图在文件夹里重复了几次，这样按文件名跑一遍干跑就能把正式战斗数到 3。这是图兰顿沙漠协会的紫色紧急委托。详情文案是「快来跟我比赛挑战怪物吧！」。接取后目标是「击杀30只萨克毒蝎后与图兰顿要塞的冒险者对话」。奖励可见为 900 金币、经验 20、紫水晶 20，以及红碎片和地图碎片。
+
+只打 **9-7** 的 **初步探索**（9-7-1），正式战斗打满 3 次。特殊事件关掉后重新进入，不加次数。
+
+```
+WORLD_MAP（阿格莱恩）
+    动作：点左侧「前往克里斯汀」页签（约 y=1640）。
+        不要点左下「离开」。停在当前城市上时，离开会回城，不会切区域。
+        │
+        ▼
+REGION_CRYSTIA → CITY_TURANDON
+    动作：点「图兰顿沙漠」进城。接取前点「协会」→「委托」→ 紫色卡
+        「“热情”的冒险者」→「接收」。
+    然后返回，等约 0.8 秒，再离开协会。
+        │
+        ▼
+CITY_TURANDON（探险）
+    动作：点右下「探险」，进入「图兰顿沙漠地区」。
+        │
+        ▼
+STAGE_DESERT
+    动作：点 9-7 旗帜。不点旁边的关卡。
+        │
+        ▼
+STAGE_9_7（巡逻走廊 9-7）
+    依据：左上「巡逻走廊 9-7」。左侧「初步探索」通常已有箭头。
+    动作：点中下金色「进入」（约 y=1606）。严禁点「扫荡」（约 y=1806）。
+        │
+        ├─ STAGE_EVENT（标题「事件」）
+        │     动作：点「确定」正中（约 y=1410；偏上会点空），
+        │           再关掉「获得物品」。次数不变，回到选关后重新进入。
+        │
+        └─ BATTLE（「战斗即将开始」）
+              战斗中不点击。VICTORY「战斗胜利」才记 1 次，
+              点「触摸继续」，再关掉战斗掉落，回到选关。
+              重复直到 3 次正式战斗。
+        │
+        ▼
+STAGE_9_7 → STAGE_DESERT → CITY_TURANDON
+    三次之后：选关页点左下「离开」，关卡图点「回程」。
+    回城后点左下冒险者的脸（名字牌「冒险者 / 奇怪的青年」），不点气泡。
+        │
+        ▼
+STORY_DIALOG → 卷轴绿勾 → QUEST_LOG → QUEST_DETAIL → LOOT_REWARD
+    对白里是「冒险者A」。点右上「跳过剧情」。
+    之后的领取与类型1、类型2相同：绿勾卷轴、标题、米色「完成」、获得物品。
+```
+
+类型3新增的模板（接取、离开、跳过、卷轴、完成、获得物品仍用前两类的按钮）：
+
+| 文件 | 标签 | 场景 | 说明 |
+| --- | --- | --- | --- |
+| region_tab_crystia.png | 前往克里斯汀 | WORLD_MAP | 左侧区域页签，不点「离开」 |
+| commission_eager_adventurer.png | “热情”的冒险者 | COMMISSION_LIST | 只点这张紫色卡 |
+| quest_accepted_scorpion.png | 击杀萨克毒蝎 | QUEST_DETAIL | 接取后的目标 |
+| quest_log_eager.png | “热情”的冒险者 | QUEST_LOG | 点标题，不点印章 |
+| desert_stage_header.png | 图兰顿沙漠地区 | STAGE_DESERT | 关卡图标题 |
+| stage_flag_9_7.png | 9-7 | STAGE_DESERT | 只点这面旗帜 |
+| stage_return.png | 回程 | STAGE_DESERT | 三次之后回城 |
+| stage_9_7_title.png | 巡逻走廊 9-7 | STAGE_9_7 | 和 1-3 分开 |
+| stage_enter_gold.png | 进入 | STAGE_9_7 | 不含「扫荡」 |
+| stage_event_title.png | 事件 | STAGE_EVENT | 不计入次数 |
+| stage_event_ok.png | 确定 | STAGE_EVENT | 点按钮正中 |
+| battle_start_banner.png | 战斗即将开始 | BATTLE | 只等待，不点击 |
+| npc_eager_adventurer.png | 冒险者 | CITY_TURANDON | 只有脸，打完三场才点 |
+
+干跑：
+
+```bash
+python main.py --dry-run tests/fixtures/walkthrough
+python main.py --dry-run tests/fixtures/turn_in --quest 仇恨会令我成长
+python main.py --dry-run tests/fixtures/multi_battle --quest “热情”的冒险者
+```
+
+日志标题这一行裁自详情页上的任务名。领取时仍走共用的「点标题 → 米色完成 → 获得物品」。米色「完成」按钮与前两类是同一个模板。
 
 ## 仍需用户提供的信息
 

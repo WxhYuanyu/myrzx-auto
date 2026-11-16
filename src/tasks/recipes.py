@@ -2,7 +2,7 @@
 
 类型1：进关卡，点 NPC 的脸，跳过剧情后战斗，再领奖。
 类型2：交物品。背包里已经有东西时，城内点 NPC 的脸并跳过剧情即可上交。
-类型3：另一条委托，走查还在进行。这里不登记配方，不写阶段，也不放模板。
+类型3：同一关打几场。事件弹窗关掉后重进，不计入次数；正式胜利才计数。
 """
 
 from __future__ import annotations
@@ -17,6 +17,7 @@ from src.vision.types import Scene
 class CommissionKind(str, Enum):
     BATTLE = "battle"
     TURN_IN = "turn_in"
+    MULTI_BATTLE = "multi_battle"
 
 
 @dataclass(frozen=True)
@@ -35,6 +36,9 @@ class CommissionRecipe:
     region_banner_template: str | None = None
     city_label_template: str | None = None
     city_scene: Scene | None = None
+    fights_required: int = 1
+    # leave：阿格莱恩点左下「离开」。tab：点左侧区域页签，不点「离开」。
+    region_switch: str = "leave"
 
 
 # 画面原文是「喳喳」，不是「嗥嗥」或「嗫嗫」。
@@ -65,12 +69,31 @@ HATRED_GROWTH = CommissionRecipe(
     city_scene=Scene.CITY_TURANDON,
 )
 
+# 图兰顿沙漠协会的紫色紧急委托。只打 9-7 的「初步探索」三场。
+EAGER_ADVENTURER = CommissionRecipe(
+    quest_id="eager_adventurer",
+    name=config.MULTI_BATTLE_COMMISSION,
+    kind=CommissionKind.MULTI_BATTLE,
+    card_template="commission_eager_adventurer",
+    log_template="quest_log_eager",
+    objective_template="quest_accepted_scorpion",
+    npc_template="npc_eager_adventurer",
+    objective_text=config.MULTI_BATTLE_OBJECTIVE,
+    stage_flag_template="stage_flag_9_7",
+    region_banner_template="world_crystia",
+    city_label_template="region_turandon",
+    city_scene=Scene.CITY_TURANDON,
+    fights_required=config.MULTI_BATTLE_FIGHTS,
+    region_switch="tab",
+)
+
 RECIPES_BY_NAME: dict[str, CommissionRecipe] = {
     ZHAZHA_BULIN.name: ZHAZHA_BULIN,
     HATRED_GROWTH.name: HATRED_GROWTH,
+    EAGER_ADVENTURER.name: EAGER_ADVENTURER,
 }
 
-# 类型3走查未完成。保持为空；不要往这里填任务名或假阶段。
+# 还没走完的委托不要往这里填名字。未知名称会直接拒绝。
 PENDING_COMMISSIONS: tuple[str, ...] = ()
 
 
@@ -83,7 +106,7 @@ def get_recipe(name: str | None = None) -> CommissionRecipe:
         known = "、".join(RECIPES_BY_NAME)
         raise KeyError(
             f"尚未收录委托「{name}」。已有配方：{known}。"
-            "类型3的走查还在进行，不会补阶段，也不会造模板。"
+            "不会为未收录的委托补阶段，也不会造模板。"
         )
     return recipe
 
@@ -92,12 +115,17 @@ def register_recipe(recipe: CommissionRecipe) -> None:
     """走查完成、并且模板已经在 manifest 里，才能登记。
 
     战斗配方必须有关卡旗帜；交物品配方必须有区域地图上的城市名。
-    没有这些就不要登记，以免跑出空阶段。
+    多场战斗还要写明打几场。没有这些就不要登记，以免跑出空阶段。
     """
     if recipe.kind is CommissionKind.BATTLE and not recipe.stage_flag_template:
         raise ValueError(f"「{recipe.name}」是战斗委托，但没有关卡旗帜模板。")
     if recipe.kind is CommissionKind.TURN_IN and not recipe.city_label_template:
         raise ValueError(f"「{recipe.name}」是交物品委托，但没有城市入口模板。")
+    if recipe.kind is CommissionKind.MULTI_BATTLE:
+        if not recipe.stage_flag_template:
+            raise ValueError(f"「{recipe.name}」是多场战斗，但没有关卡旗帜模板。")
+        if recipe.fights_required < 1:
+            raise ValueError(f"「{recipe.name}」没有要打的场数。")
     if not recipe.card_template or not recipe.log_template:
         raise ValueError(f"「{recipe.name}」缺少委托卡片或日志标题模板。")
     RECIPES_BY_NAME[recipe.name] = recipe

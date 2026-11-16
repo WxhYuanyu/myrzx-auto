@@ -42,11 +42,15 @@ def test_default_recipe_keeps_zhazha_spelling(templates):
     assert labels == {"喳喳布林入侵"}
 
 
-def test_type3_has_no_recipe_and_no_fake_stages():
+def test_unknown_commission_is_refused_without_a_fake_stage():
     assert PENDING_COMMISSIONS == ()
-    assert set(RECIPES_BY_NAME) == {"喳喳布林入侵", "仇恨会令我成长"}
-    with pytest.raises(KeyError, match="类型3"):
-        get_recipe("类型3")
+    assert set(RECIPES_BY_NAME) == {
+        "喳喳布林入侵",
+        "仇恨会令我成长",
+        "“热情”的冒险者",
+    }
+    with pytest.raises(KeyError, match="尚未收录"):
+        get_recipe("没有这条委托")
     empty = CommissionRecipe(
         quest_id="pending",
         name="还在走查",

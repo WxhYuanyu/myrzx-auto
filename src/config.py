@@ -120,3 +120,8 @@ PRIORITY_COMMISSION_STAGE = "1-3"
 # 类型2：交物品。背包里已有圣遗物时，在图兰顿城内上交即可。
 TURN_IN_COMMISSION = "仇恨会令我成长"
 TURN_IN_OBJECTIVE = "收集1份失落的圣遗物后与图兰顿要塞的冒险者对话"
+# 类型3：图兰顿沙漠 9-7-1 打三场正式战斗。事件弹窗不算次数。
+MULTI_BATTLE_COMMISSION = "“热情”的冒险者"
+MULTI_BATTLE_OBJECTIVE = "击杀30只萨克毒蝎后与图兰顿要塞的冒险者对话"
+MULTI_BATTLE_FIGHTS = 3
+MULTI_BATTLE_STAGE = "9-7"

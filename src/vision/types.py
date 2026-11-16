@@ -17,7 +17,10 @@ class Scene(str, Enum):
     COMMISSION_LIST = "COMMISSION_LIST"
     QUEST_DETAIL = "QUEST_DETAIL"
     STAGE_MAP = "STAGE_MAP"
+    STAGE_DESERT = "STAGE_DESERT"
     STAGE_1_3 = "STAGE_1_3"
+    STAGE_9_7 = "STAGE_9_7"
+    STAGE_EVENT = "STAGE_EVENT"
     STORY_DIALOG = "STORY_DIALOG"
     BATTLE = "BATTLE"
     VICTORY = "VICTORY"
@@ -37,7 +40,10 @@ class Scene(str, Enum):
             Scene.COMMISSION_LIST: "协会委托中心",
             Scene.QUEST_DETAIL: "任务详情",
             Scene.STAGE_MAP: "关卡选择图（1-x）",
+            Scene.STAGE_DESERT: "图兰顿沙漠地区",
             Scene.STAGE_1_3: "莉莉托斯近郊 1-3",
+            Scene.STAGE_9_7: "巡逻走廊 9-7",
+            Scene.STAGE_EVENT: "关卡事件",
             Scene.STORY_DIALOG: "剧情对话",
             Scene.BATTLE: "战斗中",
             Scene.VICTORY: "战斗胜利",

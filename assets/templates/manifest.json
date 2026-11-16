@@ -104,7 +104,7 @@
       "role": "click_target",
       "label": "喳喳布林入侵",
       "click_target": true,
-      "notes": "右下卡片标题。画面原文是「喳喳布林入侵」（不是「嗥嗥」）。点击目标取标题中心，暂不把整张卡片当作模板，以免人物立绘变化干扰。",
+      "notes": "右下卡片标题。画面原文是「喳喳布林入侵」。点击目标取标题中心，暂不把整张卡片当作模板，以免人物立绘变化干扰。",
       "width": 142,
       "height": 28
     },
@@ -1257,5 +1257,5 @@
       "height": 170
     }
   ],
-  "notes": "旧模板多从 tests/fixtures/screens 的局部裁切图取得；类型1全程在 tests/fixtures/walkthrough；类型2交物品在 tests/fixtures/turn_in；类型3多场战斗在 tests/fixtures/multi_battle。带 scales 的全分辨率模板只扫列出的尺度。喳喳布林入侵按屏幕原文（不是「嗥嗥」或「嗫嗫」）。任何模板都不用于点击「扫荡」。"
+  "notes": "旧模板多从 tests/fixtures/screens 的局部裁切图取得；类型1全程在 tests/fixtures/walkthrough；类型2交物品在 tests/fixtures/turn_in；类型3多场战斗在 tests/fixtures/multi_battle。带 scales 的全分辨率模板只扫列出的尺度。喳喳布林入侵按屏幕原文。任何模板都不用于点击「扫荡」。"
 }

@@ -37,8 +37,6 @@ def test_recipe_is_three_fights_on_9_7(templates):
     assert recipe.city_scene is Scene.CITY_TURANDON
     task = DailyCommissionTask(specs=templates)
     assert task.recipe.name == "喳喳布林入侵"
-    assert "嗫" not in task.recipe.name
-    assert "嗥" not in task.recipe.name
 
 
 def test_multi_battle_frames_classify(multi_battle, templates):

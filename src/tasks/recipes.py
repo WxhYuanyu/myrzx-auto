@@ -41,7 +41,7 @@ class CommissionRecipe:
     region_switch: str = "leave"
 
 
-# 画面原文是「喳喳」，不是「嗥嗥」或「嗫嗫」。
+# 画面原文是「喳喳布林入侵」。
 ZHAZHA_BULIN = CommissionRecipe(
     quest_id="zhazha_bulin",
     name=config.PRIORITY_COMMISSION,

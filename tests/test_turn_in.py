@@ -32,8 +32,6 @@ def test_default_recipe_keeps_zhazha_spelling(templates):
     assert task.recipe is get_recipe()
     assert task.recipe.name == "喳喳布林入侵"
     assert task.recipe.kind is CommissionKind.BATTLE
-    assert "嗥" not in task.recipe.name
-    assert "嗫" not in task.recipe.name
     labels = {
         spec.label
         for spec in templates

@@ -1,0 +1,886 @@
+{
+  "templates": [
+    {
+      "id": "world_aglaen",
+      "file": "world_aglaen.png",
+      "source": "01_world_allgreen.png",
+      "crop": [
+        12,
+        110,
+        210,
+        148
+      ],
+      "scene": "WORLD_MAP",
+      "role": "scene_marker",
+      "label": "阿格莱恩",
+      "click_target": false,
+      "notes": "世界地图左上蓝色横幅：羽翼图标 + 阿格莱恩。用于识别大地图。",
+      "width": 198,
+      "height": 38
+    },
+    {
+      "id": "world_lilitos",
+      "file": "world_lilitos.png",
+      "source": "01_world_allgreen.png",
+      "crop": [
+        178,
+        316,
+        322,
+        346
+      ],
+      "scene": "WORLD_MAP",
+      "role": "click_target",
+      "label": "王城莉莉托斯",
+      "click_target": true,
+      "notes": "三名角色脚下的金色地名标签。角色腿部会轻微叠在标签上沿，这是画面本身如此。",
+      "width": 144,
+      "height": 30
+    },
+    {
+      "id": "city_association",
+      "file": "city_association.png",
+      "source": "02_city_lilitos.png",
+      "crop": [
+        138,
+        402,
+        202,
+        436
+      ],
+      "scene": "CITY_LILITOS",
+      "role": "click_target",
+      "label": "协会",
+      "click_target": true,
+      "notes": "城内节点图被裁得很紧，几乎没有完整标题。金色「协会」标签是目前最稳的定位点，同时作为场景标记。",
+      "width": 64,
+      "height": 34
+    },
+    {
+      "id": "association_commission",
+      "file": "association_commission.png",
+      "source": "03_association_interior.png",
+      "crop": [
+        368,
+        398,
+        476,
+        512
+      ],
+      "scene": "ASSOCIATION",
+      "role": "click_target",
+      "label": "委托",
+      "click_target": true,
+      "notes": "协会室内右下角木牌按钮，含感叹号角标和「委托」二字。室内图同样是裁切图。",
+      "width": 108,
+      "height": 114
+    },
+    {
+      "id": "commission_center_title",
+      "file": "commission_center_title.png",
+      "source": "04_commission_center.png",
+      "crop": [
+        5,
+        4,
+        375,
+        50
+      ],
+      "scene": "COMMISSION_LIST",
+      "role": "scene_marker",
+      "label": "驯养师协会委托中心",
+      "click_target": false,
+      "notes": "列表页顶部标题，不含右侧返回按钮。",
+      "width": 370,
+      "height": 46
+    },
+    {
+      "id": "commission_zhazha_bulin",
+      "file": "commission_zhazha_bulin.png",
+      "source": "04_commission_center.png",
+      "crop": [
+        310,
+        270,
+        452,
+        298
+      ],
+      "scene": "COMMISSION_LIST",
+      "role": "click_target",
+      "label": "喳喳布林入侵",
+      "click_target": true,
+      "notes": "右下卡片标题。画面原文是「喳喳布林入侵」（不是「嗥嗥」）。点击目标取标题中心，暂不把整张卡片当作模板，以免人物立绘变化干扰。",
+      "width": 142,
+      "height": 28
+    },
+    {
+      "id": "quest_detail_title",
+      "file": "quest_detail_title.png",
+      "source": "05_quest_detail.png",
+      "crop": [
+        16,
+        20,
+        205,
+        70
+      ],
+      "scene": "QUEST_DETAIL",
+      "role": "scene_marker",
+      "label": "任务详情",
+      "click_target": false,
+      "notes": "任务详情弹窗左上标题。背景仍露出变暗的「驯养师协会委托中心」，分类时须优先本页。",
+      "width": 189,
+      "height": 50
+    },
+    {
+      "id": "quest_accept",
+      "file": "quest_accept.png",
+      "source": "05_quest_detail.png",
+      "crop": [
+        355,
+        345,
+        480,
+        415
+      ],
+      "scene": "QUEST_DETAIL",
+      "role": "click_target",
+      "label": "接收",
+      "click_target": true,
+      "notes": "详情页右下角「接收」按钮。状态文案为「尚未接受任务」。",
+      "width": 125,
+      "height": 70
+    },
+    {
+      "id": "quest_not_accepted",
+      "file": "quest_not_accepted.png",
+      "source": "05_quest_detail.png",
+      "crop": [
+        18,
+        350,
+        155,
+        380
+      ],
+      "scene": "QUEST_DETAIL",
+      "role": "status",
+      "label": "尚未接受任务",
+      "click_target": false,
+      "notes": "详情页左下状态。不作场景标记，仅用于确认尚未接取。",
+      "width": 137,
+      "height": 30
+    },
+    {
+      "id": "city_capital_subtitle",
+      "file": "city_capital_subtitle.png",
+      "source": "06_city_explore_nav.png",
+      "crop": [
+        4,
+        98,
+        220,
+        128
+      ],
+      "scene": "CITY_LILITOS",
+      "role": "scene_marker",
+      "label": "阿格莱恩独立王国首都",
+      "click_target": false,
+      "notes": "完整城内图左上副标题。不用单独的「莉莉托斯」以免和「莉莉托斯近郊」混淆。02 裁切图可能看不到这行。",
+      "width": 216,
+      "height": 30
+    },
+    {
+      "id": "city_explore",
+      "file": "city_explore.png",
+      "source": "06_city_explore_nav.png",
+      "crop": [
+        290,
+        755,
+        478,
+        826
+      ],
+      "scene": "CITY_LILITOS",
+      "role": "click_target",
+      "label": "探险",
+      "click_target": true,
+      "notes": "城内右下底栏「探险」。原截图底边略裁到「险」字下沿，仍是目前最稳的导航按钮。02 裁切图没有底栏。",
+      "width": 188,
+      "height": 71
+    },
+    {
+      "id": "stage_map_sweet_cave",
+      "file": "stage_map_sweet_cave.png",
+      "source": "07_stage_map_1x.png",
+      "crop": [
+        185,
+        300,
+        345,
+        400
+      ],
+      "scene": "STAGE_MAP",
+      "role": "scene_marker",
+      "label": "甜蜜幻窟",
+      "click_target": false,
+      "notes": "一图关卡选择页的帐篷建筑 +「甜蜜幻窟」标签。本图是局部裁切，没有大标题。",
+      "width": 160,
+      "height": 100
+    },
+    {
+      "id": "stage_flag_1_3",
+      "file": "stage_flag_1_3.png",
+      "source": "12_stage_map.png",
+      "crop": [
+        678,
+        1118,
+        832,
+        1238
+      ],
+      "scene": "STAGE_MAP",
+      "role": "click_target",
+      "label": "1-3",
+      "click_target": true,
+      "notes": "从 1080x1920 关卡图裁切：爪印旗、三星和「1-3」字样，不含旁边气泡、不含 1-2/1-4。旧模板只有旗和星，会以接近分数误配 1-2/1-4。本模板须带关卡编号。在旧裁切图 07 上约以 0.45 倍命中。",
+      "width": 154,
+      "height": 120,
+      "scales": [
+        1.0,
+        0.4,
+        0.45,
+        0.5,
+        0.6,
+        0.7
+      ]
+    },
+    {
+      "id": "stage_1_3_title",
+      "file": "stage_1_3_title.png",
+      "source": "08_stage_1_3.png",
+      "crop": [
+        8,
+        72,
+        240,
+        110
+      ],
+      "scene": "STAGE_1_3",
+      "role": "scene_marker",
+      "label": "莉莉托斯近郊 1-3",
+      "click_target": false,
+      "notes": "1-3 关卡页左上标题。比城内「莉莉托斯」更长，用于区分。",
+      "width": 232,
+      "height": 38
+    },
+    {
+      "id": "stage_node_basic",
+      "file": "stage_node_basic.png",
+      "source": "08_stage_1_3.png",
+      "crop": [
+        45,
+        448,
+        175,
+        482
+      ],
+      "scene": "STAGE_1_3",
+      "role": "click_target",
+      "label": "初步探索",
+      "click_target": true,
+      "notes": "左侧节点标签 初步探索（1-3-1）。选哪一个由气泡决定，不要默认点这个。",
+      "width": 130,
+      "height": 34
+    },
+    {
+      "id": "stage_node_deep",
+      "file": "stage_node_deep.png",
+      "source": "08_stage_1_3.png",
+      "crop": [
+        178,
+        352,
+        298,
+        385
+      ],
+      "scene": "STAGE_1_3",
+      "role": "click_target",
+      "label": "深入探索",
+      "click_target": true,
+      "notes": "中间节点标签 深入探索（1-3-2）。",
+      "width": 120,
+      "height": 33
+    },
+    {
+      "id": "stage_node_full",
+      "file": "stage_node_full.png",
+      "source": "08_stage_1_3.png",
+      "crop": [
+        318,
+        448,
+        458,
+        485
+      ],
+      "scene": "STAGE_1_3",
+      "role": "click_target",
+      "label": "完全探索",
+      "click_target": true,
+      "notes": "右侧节点标签 完全探索（1-3-3）。",
+      "width": 140,
+      "height": 37
+    },
+    {
+      "id": "stage_enter",
+      "file": "stage_enter.png",
+      "source": "08_stage_1_3.png",
+      "crop": [
+        175,
+        630,
+        312,
+        725
+      ],
+      "scene": "STAGE_1_3",
+      "role": "click_target",
+      "label": "进入",
+      "click_target": true,
+      "notes": "底部「进入 / ENTER」按钮。不要点下方的「扫荡」，除非以后另有说明。",
+      "width": 137,
+      "height": 95
+    },
+    {
+      "id": "stage_leave",
+      "file": "stage_leave.png",
+      "source": "08_stage_1_3.png",
+      "crop": [
+        5,
+        765,
+        125,
+        812
+      ],
+      "scene": "STAGE_1_3",
+      "role": "leave_button",
+      "label": "离开",
+      "click_target": true,
+      "notes": "1-3 关卡页左下「离开」。本任务在选点后应点「进入」，一般不点离开。",
+      "width": 120,
+      "height": 47
+    },
+    {
+      "id": "association_leave",
+      "file": "association_leave.png",
+      "source": "03_association_interior.png",
+      "crop": [
+        5,
+        470,
+        110,
+        512
+      ],
+      "scene": "ASSOCIATION",
+      "role": "leave_button",
+      "label": "离开",
+      "click_target": true,
+      "notes": "协会室内左下「离开」。接取委托之后若还停在室内，用它返回城内再点「探险」。",
+      "width": 105,
+      "height": 42
+    },
+    {
+      "id": "quest_bubble",
+      "file": "quest_bubble.png",
+      "source": "09_explore_bubble.png",
+      "crop": [
+        116,
+        100,
+        158,
+        142
+      ],
+      "scene": "STAGE_1_3",
+      "role": "quest_bubble",
+      "label": "任务气泡",
+      "click_target": false,
+      "notes": "白色带三点的圆形对话气泡。出现在应进入的节点（初步/深入/完全）上方。只裁气泡本身，不含整个小岛。08 全屏图里没有这个气泡；09 是「初步探索」的局部图。",
+      "width": 42,
+      "height": 42
+    },
+    {
+      "id": "stage_node_basic_09",
+      "file": "stage_node_basic_09.png",
+      "source": "09_explore_bubble.png",
+      "crop": [
+        40,
+        228,
+        165,
+        262
+      ],
+      "scene": "STAGE_1_3",
+      "role": "click_target",
+      "label": "初步探索",
+      "click_target": true,
+      "notes": "从 09 气泡局部图裁切的「初步探索」标签（含星标下沿）。08 同源模板在这张局部图上分数偏紧，用本模板稳住识别。",
+      "width": 125,
+      "height": 34
+    },
+    {
+      "id": "world_lilitos_full",
+      "file": "world_lilitos_full.png",
+      "source": "02_world_lilitos.png",
+      "crop": [
+        515,
+        615,
+        805,
+        682
+      ],
+      "scene": "WORLD_MAP",
+      "role": "click_target",
+      "label": "王城莉莉托斯",
+      "click_target": true,
+      "scales": [
+        1.0,
+        0.4,
+        0.45,
+        0.5,
+        0.6,
+        0.7
+      ],
+      "notes": "1080x1920 大地图上的金色「王城莉莉托斯」标签（下滑地图后可见）。与旧裁切模板 world_lilitos 并存，取分数更高者点击。",
+      "width": 290,
+      "height": 67
+    },
+    {
+      "id": "world_nan_seram",
+      "file": "world_nan_seram.png",
+      "source": "01_world_south.png",
+      "crop": [
+        535,
+        850,
+        725,
+        910
+      ],
+      "scene": "WORLD_MAP",
+      "role": "status",
+      "label": "南赛拉姆",
+      "click_target": false,
+      "scales": [
+        1.0,
+        0.4,
+        0.45,
+        0.5,
+        0.6,
+        0.7
+      ],
+      "notes": "大地图南侧地名。出现且未见王城莉莉托斯时，应向下滑动地图以露出北边的王城。不作场景标记。",
+      "width": 190,
+      "height": 60
+    },
+    {
+      "id": "skip_story",
+      "file": "skip_story.png",
+      "source": "14_story_dialog.png",
+      "crop": [
+        755,
+        14,
+        1065,
+        100
+      ],
+      "scene": "STORY_DIALOG",
+      "role": "click_target",
+      "label": "跳过剧情",
+      "click_target": true,
+      "scales": [
+        1.0,
+        0.4,
+        0.45,
+        0.5,
+        0.6,
+        0.7
+      ],
+      "notes": "剧情对话框右上角「跳过剧情 >>」。战前与小孩对话、战后剧情都点这里。跳过战前对话会直接进入战斗。",
+      "width": 310,
+      "height": 86
+    },
+    {
+      "id": "npc_child",
+      "file": "npc_child.png",
+      "source": "13_stage_1_3_npc.png",
+      "crop": [
+        0,
+        1355,
+        155,
+        1535
+      ],
+      "scene": "STAGE_1_3",
+      "role": "click_only",
+      "label": "小孩",
+      "click_target": true,
+      "scales": [
+        1.0,
+        0.4,
+        0.45,
+        0.5,
+        0.6,
+        0.7
+      ],
+      "notes": "1-3 选关页左下角小孩头像，不含右侧三点气泡。必须点头像/脸（约 90,1460），不要点边缘气泡。不作场景标记。",
+      "width": 155,
+      "height": 180
+    },
+    {
+      "id": "battle_ap",
+      "file": "battle_ap.png",
+      "source": "15_battle.png",
+      "crop": [
+        20,
+        1610,
+        250,
+        1695
+      ],
+      "scene": "BATTLE",
+      "role": "scene_marker",
+      "label": "活力点",
+      "click_target": false,
+      "scales": [
+        1.0,
+        0.4,
+        0.45,
+        0.5,
+        0.6,
+        0.7
+      ],
+      "notes": "战斗界面左下「活力点」条。胜利结算时 HUD 仍可能残留，分类须让 VICTORY 优先于 BATTLE。战斗中不要点击，只轮询等待。",
+      "width": 230,
+      "height": 85
+    },
+    {
+      "id": "battle_victory",
+      "file": "battle_victory.png",
+      "source": "16_victory.png",
+      "crop": [
+        220,
+        890,
+        860,
+        1025
+      ],
+      "scene": "VICTORY",
+      "role": "scene_marker",
+      "label": "战斗胜利",
+      "click_target": false,
+      "scales": [
+        1.0,
+        0.4,
+        0.45,
+        0.5,
+        0.6,
+        0.7
+      ],
+      "notes": "结算大字「战斗胜利」。见到后点击「触摸继续」或屏幕中部（约 540,1100）。",
+      "width": 640,
+      "height": 135
+    },
+    {
+      "id": "touch_continue",
+      "file": "touch_continue.png",
+      "source": "16_victory.png",
+      "crop": [
+        280,
+        1255,
+        800,
+        1308
+      ],
+      "scene": "VICTORY",
+      "role": "click_target",
+      "label": "触摸继续",
+      "click_target": true,
+      "scales": [
+        1.0,
+        0.4,
+        0.45,
+        0.5,
+        0.6,
+        0.7
+      ],
+      "notes": "战斗胜利画面上的「触摸继续」。与获得物品弹窗上的同文案背景不同，不能共用，领奖用 loot_touch。",
+      "width": 520,
+      "height": 53
+    },
+    {
+      "id": "quest_scroll_done",
+      "file": "quest_scroll_done.png",
+      "source": "18_stage_quest_done.png",
+      "crop": [
+        755,
+        95,
+        945,
+        275
+      ],
+      "scene": "STAGE_1_3",
+      "role": "click_only",
+      "label": "任务卷轴（已完成）",
+      "click_target": true,
+      "threshold": 0.9,
+      "click_offset": [
+        0,
+        25
+      ],
+      "scales": [
+        1.0,
+        0.4,
+        0.45,
+        0.5,
+        0.6,
+        0.7
+      ],
+      "notes": "1-3 右上任务卷轴带绿色完成勾。无勾卷轴会以 0.74–0.82 误配，故阈值 0.90。不作场景标记。中心偏上，点击时向下偏移到卷轴本体（约 847,216）。",
+      "width": 190,
+      "height": 180
+    },
+    {
+      "id": "quest_scroll_check",
+      "file": "quest_scroll_check.png",
+      "source": "18_stage_quest_done.png",
+      "crop": [
+        845,
+        85,
+        935,
+        165
+      ],
+      "scene": "STAGE_1_3",
+      "role": "status",
+      "label": "任务完成勾",
+      "click_target": false,
+      "click_offset": [
+        -43,
+        91
+      ],
+      "scales": [
+        1.0,
+        0.4,
+        0.45,
+        0.5,
+        0.6,
+        0.7
+      ],
+      "notes": "卷轴上的绿色完成勾，比整段卷轴更不易误配。若只命中勾、未命中卷轴模板，点击位置按偏移落到卷轴本体（约 847,216）。",
+      "width": 90,
+      "height": 80
+    },
+    {
+      "id": "quest_log_title",
+      "file": "quest_log_title.png",
+      "source": "19_quest_log.png",
+      "crop": [
+        15,
+        130,
+        270,
+        250
+      ],
+      "scene": "QUEST_LOG",
+      "role": "scene_marker",
+      "label": "任务",
+      "click_target": false,
+      "scales": [
+        1.0,
+        0.4,
+        0.45,
+        0.5,
+        0.6,
+        0.7
+      ],
+      "notes": "任务日志左上标题「任务」。详情/领奖弹窗打开时标题仍在背景，分类须让 QUEST_DETAIL / LOOT_REWARD 优先。",
+      "width": 255,
+      "height": 120
+    },
+    {
+      "id": "quest_log_zhazha",
+      "file": "quest_log_zhazha.png",
+      "source": "19_quest_log.png",
+      "crop": [
+        80,
+        448,
+        400,
+        505
+      ],
+      "scene": "QUEST_LOG",
+      "role": "click_only",
+      "label": "喳喳布林入侵",
+      "click_target": true,
+      "scales": [
+        1.0,
+        0.4,
+        0.45,
+        0.5,
+        0.6,
+        0.7
+      ],
+      "notes": "任务日志剧情页中该委托的标题行。先点这一行打开详情，不要点列表上的绿色「完成」印章。不作场景标记（详情打开时行仍可能露在背景里）。",
+      "width": 320,
+      "height": 57
+    },
+    {
+      "id": "quest_complete_stamp",
+      "file": "quest_complete_stamp.png",
+      "source": "19_quest_log.png",
+      "crop": [
+        850,
+        425,
+        1020,
+        590
+      ],
+      "scene": "QUEST_LOG",
+      "role": "status",
+      "label": "完成印章",
+      "click_target": false,
+      "scales": [
+        1.0,
+        0.4,
+        0.45,
+        0.5,
+        0.6,
+        0.7
+      ],
+      "notes": "列表行右侧绿色「完成」印章。这不是领取按钮，不要点击。",
+      "width": 170,
+      "height": 165
+    },
+    {
+      "id": "quest_complete_text",
+      "file": "quest_complete_text.png",
+      "source": "19_quest_log.png",
+      "crop": [
+        95,
+        530,
+        310,
+        580
+      ],
+      "scene": "QUEST_LOG",
+      "role": "status",
+      "label": "任务完成！",
+      "click_target": false,
+      "scales": [
+        1.0,
+        0.4,
+        0.45,
+        0.5,
+        0.6,
+        0.7
+      ],
+      "notes": "日志行上的「任务完成！」文案。仅作状态确认。",
+      "width": 215,
+      "height": 50
+    },
+    {
+      "id": "quest_finish",
+      "file": "quest_finish.png",
+      "source": "20_quest_finish.png",
+      "crop": [
+        800,
+        1240,
+        1035,
+        1355
+      ],
+      "scene": "QUEST_DETAIL",
+      "role": "click_only",
+      "label": "完成",
+      "click_target": true,
+      "scales": [
+        1.0,
+        0.4,
+        0.45,
+        0.5,
+        0.6,
+        0.7
+      ],
+      "notes": "任务详情页中下部、奖励图标下方的米色「完成」按钮，中心约 (910, 1310)。不是屏幕最底部（点 y=1800 会点空），也不是列表上的印章。不作场景标记，以免和「接收」页混淆。",
+      "width": 235,
+      "height": 115
+    },
+    {
+      "id": "loot_title",
+      "file": "loot_title.png",
+      "source": "21_loot.png",
+      "crop": [
+        380,
+        520,
+        700,
+        620
+      ],
+      "scene": "LOOT_REWARD",
+      "role": "scene_marker",
+      "label": "获得物品",
+      "click_target": false,
+      "scales": [
+        1.0,
+        0.4,
+        0.45,
+        0.5,
+        0.6,
+        0.7
+      ],
+      "notes": "领取后弹出的「获得物品」标题。",
+      "width": 320,
+      "height": 100
+    },
+    {
+      "id": "loot_touch",
+      "file": "loot_touch.png",
+      "source": "21_loot.png",
+      "crop": [
+        280,
+        1175,
+        800,
+        1250
+      ],
+      "scene": "LOOT_REWARD",
+      "role": "click_target",
+      "label": "触摸继续",
+      "click_target": true,
+      "scales": [
+        1.0,
+        0.4,
+        0.45,
+        0.5,
+        0.6,
+        0.7
+      ],
+      "notes": "获得物品弹窗上的「触摸继续」。与战斗胜利结算上的同文案不能共用。",
+      "width": 520,
+      "height": 75
+    },
+    {
+      "id": "quest_accepted_obj",
+      "file": "quest_accepted_obj.png",
+      "source": "08_after_accept.png",
+      "crop": [
+        50,
+        1235,
+        800,
+        1310
+      ],
+      "scene": "QUEST_DETAIL",
+      "role": "status",
+      "label": "消灭入侵的喳喳布林",
+      "click_target": false,
+      "scales": [
+        1.0,
+        0.4,
+        0.45,
+        0.5,
+        0.6,
+        0.7
+      ],
+      "notes": "接取后详情目标「消灭 莉莉托斯郊外 1-3 的入侵的喳喳布林」。此时没有「接收」按钮。用卡片右上返回箭头关闭详情，不要点屏幕底部「离开」。",
+      "width": 750,
+      "height": 75
+    },
+    {
+      "id": "quest_detail_back",
+      "file": "quest_detail_back.png",
+      "source": "06_quest_detail.png",
+      "crop": [
+        925,
+        455,
+        1045,
+        555
+      ],
+      "scene": "QUEST_DETAIL",
+      "role": "click_only",
+      "label": "返回",
+      "click_target": true,
+      "scales": [
+        1.0,
+        0.4,
+        0.45,
+        0.5,
+        0.6,
+        0.7
+      ],
+      "notes": "任务详情/委托列表卡片右上角返回箭头。接取后用它关详情，再关列表，最后才点协会「离开」。关闭动画结束前不要连点离开。不作场景标记。领取详情里也有箭头，领取阶段应点「完成」而不是它。",
+      "width": 120,
+      "height": 100
+    }
+  ],
+  "notes": "旧模板多从 tests/fixtures/screens 的局部裁切图取得；完整 1080x1920 实走记录在 tests/fixtures/walkthrough。带 scales 的模板为全分辨率裁切，只扫接近 1.0 和适配旧裁切图的 0.4–0.7，避免在 1080 图上再放大。喳喳布林入侵按屏幕原文（不是「嗥嗥」或「嗫嗫」）。"
+}

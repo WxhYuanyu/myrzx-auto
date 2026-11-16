@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "myrzx-auto"
+version = "0.1.0"
+description = "牧羊人之心（myrzx）日常自动化骨架：识图点击，不读内存。"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "opencv-python-headless>=4.8",
+    "numpy>=1.26",
+    "pillow>=10.0",
+]
+
+[project.optional-dependencies]
+windows = ["pywin32>=306"]
+dev = ["pytest>=7.4"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-q"

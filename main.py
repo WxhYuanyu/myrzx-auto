@@ -19,6 +19,7 @@ if str(_ROOT) not in sys.path:
 
 from src import config  # noqa: E402
 from src.tasks.daily_commission import DailyCommissionTask  # noqa: E402
+from src.tasks.recipes import CommissionKind, get_recipe  # noqa: E402
 from src.vision.image import load_bgr  # noqa: E402
 from src.window import (  # noqa: E402
     WindowError,
@@ -34,6 +35,17 @@ _TASK_SUMMARY = (
     "每日委托：王城莉莉托斯 → 协会 → 委托 → 喳喳布林入侵 → 接收 → "
     "返回/离开 → 探险 → 1-3 → 与小孩对话 → 跳过剧情 → 等待战斗 → "
     "触摸继续 → 任务日志 → 完成 → 获得物品"
+)
+_TURN_IN_SUMMARY = (
+    "每日委托：阿格莱恩「离开」→ 克里斯汀 → 图兰顿沙漠 → 协会 → 委托 → "
+    "仇恨会令我成长 → 接收 → 返回/离开 → 点冒险者的脸 → 跳过剧情 → "
+    "任务卷轴 → 标题 → 完成 → 获得物品"
+)
+_MULTI_BATTLE_SUMMARY = (
+    "每日委托：阿格莱恩「前往克里斯汀」→ 图兰顿沙漠 → 协会 → 委托 → "
+    "“热情”的冒险者 → 接收 → 探险 → 9-7 初步探索点「进入」三次"
+    "（事件弹窗不计数）→ 离开 → 回程 → 点冒险者的脸 → 跳过剧情 → "
+    "任务卷轴 → 标题 → 完成 → 获得物品"
 )
 
 
@@ -54,12 +66,15 @@ def main(argv: list[str] | None = None) -> int:
 
     # 默认 dry-run
     path = Path(args.dry_run) if args.dry_run else config.DEFAULT_FIXTURE_DIR
-    return _cmd_dry_run(path)
+    return _cmd_dry_run(path, args.quest)
 
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="牧羊人之心日常自动化（当前范围：每日委托「喳喳布林入侵」全程）",
+        description=(
+            "牧羊人之心日常自动化（每日委托：类型1「喳喳布林入侵」，"
+            "类型2「仇恨会令我成长」，类型3「“热情”的冒险者」）"
+        ),
     )
     parser.add_argument(
         "--dry-run",
@@ -78,6 +93,12 @@ def _build_parser() -> argparse.ArgumentParser:
         "--live",
         action="store_true",
         help="（默认关闭）在 Windows 上对模拟器窗口执行真实点击。Linux 上会被拒绝。",
+    )
+    parser.add_argument(
+        "--quest",
+        default=config.PRIORITY_COMMISSION,
+        help="委托标题。默认「喳喳布林入侵」。交物品：「仇恨会令我成长」。"
+        "多场战斗：「“热情”的冒险者」。未知名称会直接停止，不会编造路线。",
     )
     parser.add_argument(
         "--verbose",
@@ -133,7 +154,16 @@ def _cmd_list_windows() -> int:
     return 0
 
 
-def _cmd_dry_run(path: Path) -> int:
+def _summary_for(quest_name: str) -> str:
+    recipe = get_recipe(quest_name)
+    if recipe.kind is CommissionKind.TURN_IN:
+        return _TURN_IN_SUMMARY
+    if recipe.kind is CommissionKind.MULTI_BATTLE:
+        return _MULTI_BATTLE_SUMMARY
+    return _TASK_SUMMARY
+
+
+def _cmd_dry_run(path: Path, quest_name: str) -> int:
     if not path.exists():
         print(f"路径不存在: {path}")
         return 2
@@ -141,10 +171,16 @@ def _cmd_dry_run(path: Path) -> int:
     if not images:
         print(f"没有找到图片: {path}")
         return 2
+    try:
+        recipe = get_recipe(quest_name)
+    except KeyError as exc:
+        print(str(exc))
+        return 2
 
-    task = DailyCommissionTask()
+    task = DailyCommissionTask(recipe=recipe)
+    summary = _summary_for(quest_name)
     print(f"dry-run：共 {len(images)} 张图，不会发送真实点击。")
-    print(f"任务: {_TASK_SUMMARY}")
+    print(f"任务: {summary}")
     print()
 
     last_status = "continue"
@@ -164,8 +200,8 @@ def _cmd_dry_run(path: Path) -> int:
 
     if last_status == "done":
         print("==== 路径规划结束（委托已完成）====")
-        print(_TASK_SUMMARY)
-        print("战斗过程中不会点击；未收录的中间页会跳过。任何阶段都不会点「扫荡」。")
+        print(summary)
+        print("未收录的中间页会跳过。任何阶段都不会点「扫荡」。")
     elif last_status == "waiting_battle":
         print("==== 路径规划结束（正在等待战斗）====")
         print("已进入战斗，应继续轮询截图直到「战斗胜利」，不要点击。")
@@ -202,7 +238,7 @@ def _cmd_live() -> int:
     print("顶层: " + found.top_level.brief())
     print("目标: " + found.target.brief())
     print()
-    print("状态机已覆盖「喳喳布林入侵」全程（接取、探险、小孩对话、等待战斗、领奖）。")
+    print("状态机已覆盖「喳喳布林入侵」、交物品「仇恨会令我成长」和多场战斗「“热情”的冒险者」。")
     print("请先运行 python main.py --list-windows，以及 --dry-run 验证识别。")
     print("确认窗口后再把真实点击循环接上。未收录的中间页会跳过，不会点「扫荡」。")
     return 0

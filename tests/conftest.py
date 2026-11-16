@@ -14,6 +14,8 @@ from src.vision.templates import load_templates  # noqa: E402
 
 FIXTURE_DIR = ROOT / "tests" / "fixtures" / "screens"
 WALKTHROUGH_DIR = ROOT / "tests" / "fixtures" / "walkthrough"
+TURN_IN_DIR = ROOT / "tests" / "fixtures" / "turn_in"
+MULTI_BATTLE_DIR = ROOT / "tests" / "fixtures" / "multi_battle"
 
 SCREEN_FILES = {
     "world": FIXTURE_DIR / "01_world_allgreen.png",
@@ -54,6 +56,38 @@ WALKTHROUGH_FILES = {
 
 WALKTHROUGH_ORDER = list(WALKTHROUGH_FILES.keys())
 
+TURN_IN_FILES = {
+    "region": TURN_IN_DIR / "01_region_crystia.png",
+    "commission": TURN_IN_DIR / "02_commission_list.png",
+    "after_accept": TURN_IN_DIR / "03_after_accept.png",
+    "city_npc": TURN_IN_DIR / "04_city_npc.png",
+    "story": TURN_IN_DIR / "05_story.png",
+    "city_scroll": TURN_IN_DIR / "06_city_scroll.png",
+    "quest_finish": TURN_IN_DIR / "07_quest_finish.png",
+    "loot": TURN_IN_DIR / "08_loot.png",
+}
+
+TURN_IN_ORDER = list(TURN_IN_FILES.keys())
+
+MULTI_BATTLE_FILES = {
+    "region": MULTI_BATTLE_DIR / "01_region_crystia.png",
+    "commission": MULTI_BATTLE_DIR / "02_commission_list.png",
+    "after_accept": MULTI_BATTLE_DIR / "03_after_accept.png",
+    "stage_map": MULTI_BATTLE_DIR / "04_stage_map.png",
+    "stage_select": MULTI_BATTLE_DIR / "05_stage_select.png",
+    "event": MULTI_BATTLE_DIR / "06_event.png",
+    "event_loot": MULTI_BATTLE_DIR / "07_event_loot.png",
+    "battle_start": MULTI_BATTLE_DIR / "08_battle_start.png",
+    "victory": MULTI_BATTLE_DIR / "09_victory.png",
+    "battle_loot": MULTI_BATTLE_DIR / "10_battle_loot.png",
+    "city_npc": MULTI_BATTLE_DIR / "11_city_npc.png",
+    "story": MULTI_BATTLE_DIR / "12_story.png",
+    "city_scroll": MULTI_BATTLE_DIR / "13_city_scroll.png",
+    "quest_loot": MULTI_BATTLE_DIR / "14_quest_loot.png",
+}
+
+MULTI_BATTLE_ORDER = list(MULTI_BATTLE_FILES.keys())
+
 
 @pytest.fixture(scope="session")
 def templates():
@@ -68,3 +102,13 @@ def screens():
 @pytest.fixture(scope="session")
 def walkthrough():
     return {name: load_bgr(path) for name, path in WALKTHROUGH_FILES.items()}
+
+
+@pytest.fixture(scope="session")
+def turn_in():
+    return {name: load_bgr(path) for name, path in TURN_IN_FILES.items()}
+
+
+@pytest.fixture(scope="session")
+def multi_battle():
+    return {name: load_bgr(path) for name, path in MULTI_BATTLE_FILES.items()}

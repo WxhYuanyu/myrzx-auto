@@ -111,9 +111,17 @@ BATTLE_POLL_SEC = 0.8
 # 世界地图若停在南赛拉姆、看不见王城莉莉托斯，向下滑动几次再放弃。
 MAP_SWIPE_MAX = 4
 
-# 委托相关（已知信息，按屏幕原文「喳喳布林入侵」）
+# 委托相关。类型1按屏幕原文「喳喳布林入侵」。
 PRIORITY_COMMISSION = "喳喳布林入侵"
 DAILY_COMMISSION_CAP = 6
 # 已知奖励（wiki / 卡片 / 获得物品弹窗可见）：400 金币 + 20 氚金等；需通关 1-3。
 PRIORITY_COMMISSION_REWARD = "400 金币 + 20 氚金"
 PRIORITY_COMMISSION_STAGE = "1-3"
+# 类型2：交物品。背包里已有圣遗物时，在图兰顿城内上交即可。
+TURN_IN_COMMISSION = "仇恨会令我成长"
+TURN_IN_OBJECTIVE = "收集1份失落的圣遗物后与图兰顿要塞的冒险者对话"
+# 类型3：图兰顿沙漠 9-7-1 打三场正式战斗。事件弹窗不算次数。
+MULTI_BATTLE_COMMISSION = "“热情”的冒险者"
+MULTI_BATTLE_OBJECTIVE = "击杀30只萨克毒蝎后与图兰顿要塞的冒险者对话"
+MULTI_BATTLE_FIGHTS = 3
+MULTI_BATTLE_STAGE = "9-7"

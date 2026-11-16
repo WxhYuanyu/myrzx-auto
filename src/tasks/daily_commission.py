@@ -1,8 +1,8 @@
-"""每日委托状态机：接取「喳喳布林入侵」，进 1-3 与小孩对话后战斗，再领取奖励。
+"""每日委托：共用动词 + 每条委托一份短配方。
 
-已知路径（实走 1080x1920）：
+类型1「喳喳布林入侵」（战斗，画面原文是「喳喳」）：
   世界地图（若停在南赛拉姆则下滑露出王城莉莉托斯）→ 城内协会
-  → 右下角「委托」→ 委托中心点「喳喳布林入侵」→ 任务详情点「接收」
+  → 右下角「委托」→ 委托中心点卡片 → 任务详情点「接收」
   → 用卡片右上返回关闭详情和列表（等关窗动画）→ 协会「离开」
   → 城内右下「探险」→ 关卡图点带「1-3」字样的旗帜
   → 点左下角小孩头像（不要点边缘气泡）→ 右上「跳过剧情」，直接进入战斗
@@ -10,6 +10,22 @@
   → 若有战后剧情再跳过 → 回到 1-3 后点右上带绿勾的任务卷轴
   → 在任务日志点该委托标题打开详情 → 点详情中下部「完成」
   → 在「获得物品」上点「触摸继续」。
+
+类型2「仇恨会令我成长」（交物品，阿格莱恩仍点「离开」）：
+  阿格莱恩区域地图左下「离开」→ 克里斯汀 → 点「图兰顿沙漠」进城
+  → 协会「委托」→ 点这张卡 → 「接收」
+  → 返回并离开，回到城内点冒险者的脸（不要点三点气泡）
+  → 「跳过剧情」。圣遗物已在背包时就此上交，不必去要塞或战斗
+  → 卷轴绿勾 → 点标题 → 米色「完成」→ 「获得物品」。
+
+类型3「“热情”的冒险者」（多场战斗，只打图九 9-7-1 三次）：
+  阿格莱恩点左侧「前往克里斯汀」页签（不点左下「离开」）→ 图兰顿沙漠
+  → 协会「委托」→ 紫色卡片 → 「接收」→ 返回并离开
+  → 城内「探险」→ 图兰顿沙漠地区点 9-7 → 初步探索已选中时点金色「进入」
+  → 「事件」弹窗点「确定」再关掉掉落，不计数，然后重新进入
+  → 「战斗即将开始」后不点击；「战斗胜利」才算 1 次，再关掉掉落
+  → 三次后选关页「离开」，关卡图「回程」
+  → 点城内冒险者的脸 → 「跳过剧情」→ 卷轴绿勾 → 标题 → 米色「完成」→ 「获得物品」。
 
 未收录的中间页会先跳过，等到能识别的画面再继续。任何阶段都不点「扫荡」。
 """
@@ -19,12 +35,14 @@ from __future__ import annotations
 import logging
 import time
 from collections.abc import Sequence
-from enum import Enum
 
 import numpy as np
 
 from src import config
 from src.tasks.base import PlannedAction, StepResult, TaskBase
+from src.tasks.phase import Phase
+from src.tasks.recipes import CommissionKind, CommissionRecipe, ZHAZHA_BULIN
+from src.tasks import verbs
 from src.vision.bubble import find_explore_nodes, select_node_by_bubble
 from src.vision.classify import Classification, classify_scene
 from src.vision.match import find_template
@@ -34,10 +52,9 @@ from src.vision.types import Match, Scene
 
 logger = logging.getLogger("myrzx.task.daily_commission")
 
-CARD_MISSING_MESSAGE = (
-    "当前委托列表中没有找到「{name}」。可能今日尚未刷新、已被接取/完成，"
-    "或列表被裁切/分辨率导致标题未匹配。工具在此停止，不会改点其他委托。"
-).format(name=config.PRIORITY_COMMISSION)
+# 旧测试和外部代码仍从本模块引用这两段文案。
+CARD_MISSING_MESSAGE = verbs.card_missing_message(config.PRIORITY_COMMISSION)
+CLAIM_DONE_MESSAGE = verbs.claim_done_message(config.PRIORITY_COMMISSION)
 
 NPC_OR_BUBBLE_MISSING_MESSAGE = (
     "已进入莉莉托斯近郊 1-3。这条委托需要先点击左下角小孩头像对话"
@@ -55,17 +72,19 @@ SKIP_UNKNOWN_MESSAGE = (
     "而不是臆造点击。"
 )
 
-CLAIM_DONE_MESSAGE = (
-    "「喳喳布林入侵」已领取完毕，任务日志中不再显示这条委托。"
+_SCROLL_MESSAGE = (
+    "战斗已结束，点击右上带绿勾的任务卷轴打开任务日志（不要点邮件或背包）。"
 )
-
-
-class Phase(str, Enum):
-    ACCEPT = "ACCEPT"
-    GO_STAGE = "GO_STAGE"
-    IN_BATTLE = "IN_BATTLE"
-    CLAIM = "CLAIM"
-    DONE = "DONE"
+_TURN_IN_SCROLL_MESSAGE = (
+    "任务卷轴已出现绿色完成勾。点击卷轴本体打开任务日志，不要点旁边的邮件或背包。"
+)
+_CHILD_MESSAGE = (
+    "点击左下角小孩头像（不要点边缘对话气泡）。对话出现后点右上「跳过剧情」，会直接进入战斗。"
+)
+_ADVENTURER_MESSAGE = (
+    "点击城内左下角「冒险者」的脸，不要点脸右侧的三点气泡。"
+    "对话出现后点右上「跳过剧情」。"
+)
 
 
 class DailyCommissionTask(TaskBase):
@@ -75,16 +94,21 @@ class DailyCommissionTask(TaskBase):
         self,
         specs: Sequence[TemplateSpec] | None = None,
         ocr: OcrProvider | None = None,
+        recipe: CommissionRecipe | None = None,
     ) -> None:
         super().__init__()
         self.specs = list(specs) if specs is not None else load_templates()
         self.by_id = templates_by_id(self.specs)
         self.ocr = ocr
+        self.recipe = recipe if recipe is not None else ZHAZHA_BULIN
         self.phase = Phase.ACCEPT
         self.awaiting_enter = False
         self.map_swipes = 0
         self.battle_started_at: float | None = None
         self.loot_claimed = False
+        self.fights_done = 0
+        self.victory_counted = False
+        self.loot_kind: str | None = None
         self._match_cache: dict[str, Match | None] = {}
 
     def plan(self, image_bgr: np.ndarray) -> StepResult:
@@ -94,6 +118,22 @@ class DailyCommissionTask(TaskBase):
             self._match_cache.setdefault(match.template_id, match)
         self.log.info("识别结果: %s", classification.brief())
         scene = classification.scene
+        kind = self.recipe.kind
+        multi = kind is CommissionKind.MULTI_BATTLE
+        if scene is not Scene.VICTORY:
+            self.victory_counted = False
+        if kind in {CommissionKind.TURN_IN, CommissionKind.MULTI_BATTLE} and scene in {
+            Scene.WORLD_MAP,
+            Scene.REGION_CRYSTIA,
+        }:
+            return self._plan_turn_in_region(image_bgr, classification)
+        if multi and scene in {Scene.CITY_LILITOS, Scene.CITY_TURANDON}:
+            return self._plan_multi_city(image_bgr, classification)
+        if kind is CommissionKind.TURN_IN and scene in {
+            Scene.CITY_LILITOS,
+            Scene.CITY_TURANDON,
+        }:
+            return self._plan_turn_in_city(image_bgr, classification)
         if scene is Scene.WORLD_MAP:
             return self._plan_world(image_bgr, classification)
         if scene is Scene.CITY_LILITOS:
@@ -104,18 +144,28 @@ class DailyCommissionTask(TaskBase):
             return self._plan_commission_list(image_bgr, classification)
         if scene is Scene.QUEST_DETAIL:
             return self._plan_quest_detail(image_bgr, classification)
-        if scene is Scene.STAGE_MAP:
+        if scene is Scene.STAGE_MAP and kind is CommissionKind.BATTLE:
             return self._plan_stage_map(image_bgr, classification)
-        if scene is Scene.STAGE_1_3:
+        if scene is Scene.STAGE_DESERT and multi:
+            return self._plan_desert_map(image_bgr, classification)
+        if scene in {Scene.STAGE_9_7, Scene.STAGE_1_3} and multi:
+            return self._plan_stage_9_7(image_bgr, classification)
+        if scene is Scene.STAGE_1_3 and kind is CommissionKind.BATTLE:
             return self._plan_stage_1_3(image_bgr, classification)
+        if scene is Scene.STAGE_EVENT and multi:
+            return self._plan_stage_event(image_bgr, classification)
         if scene is Scene.STORY_DIALOG:
             return self._plan_story_dialog(image_bgr, classification)
-        if scene is Scene.BATTLE:
+        if scene is Scene.BATTLE and kind in {CommissionKind.BATTLE, CommissionKind.MULTI_BATTLE}:
             return self._plan_battle(image_bgr, classification)
-        if scene is Scene.VICTORY:
+        if scene is Scene.VICTORY and kind is CommissionKind.BATTLE:
             return self._plan_victory(image_bgr, classification)
+        if scene is Scene.VICTORY and multi:
+            return self._plan_multi_victory(image_bgr, classification)
         if scene is Scene.QUEST_LOG:
             return self._plan_quest_log(image_bgr, classification)
+        if scene is Scene.LOOT_REWARD and multi:
+            return self._plan_multi_loot(image_bgr, classification)
         if scene is Scene.LOOT_REWARD:
             return self._plan_loot(image_bgr, classification)
         if self.phase is Phase.DONE:
@@ -144,6 +194,340 @@ class DailyCommissionTask(TaskBase):
             ),
             status="unknown",
             message="未能识别当前页面，停止以免误点。",
+        )
+
+    def _plan_turn_in_region(
+        self, image_bgr: np.ndarray, clf: Classification
+    ) -> StepResult:
+        """交物品：先看左上角地名。阿格莱恩点「离开」，克里斯汀点「图兰顿沙漠」。"""
+        matches = list(clf.matches)
+        crystia = self._require(image_bgr, "world_crystia")
+        if crystia is not None:
+            matches = _merge_match(matches, crystia)
+            label = self._require(image_bgr, "region_turandon")
+            if label is None:
+                missing = "左上角已确认是「克里斯汀」，但没有匹配到「图兰顿沙漠」，不会改点别的地名。"
+                return StepResult(
+                    scene=Scene.REGION_CRYSTIA,
+                    reason=clf.reason,
+                    matches=matches,
+                    action=PlannedAction(
+                        kind="halt",
+                        label="未找到图兰顿沙漠",
+                        message=missing,
+                    ),
+                    status="halt_missing",
+                    message=missing,
+                )
+            matches = _merge_match(matches, label)
+            return self._click_result(
+                Scene.REGION_CRYSTIA,
+                clf,
+                matches,
+                label,
+                "左上角是「克里斯汀」。点击「图兰顿沙漠」进入城市。",
+            )
+
+        aglaen = self._require(image_bgr, "world_aglaen")
+        if aglaen is not None:
+            matches = _merge_match(matches, aglaen)
+        if self.recipe.region_switch == "tab":
+            return verbs.open_region_tab(
+                self,
+                image_bgr,
+                clf,
+                "region_tab_crystia",
+                "左上角是「阿格莱恩」。点击左侧「前往克里斯汀」页签切换区域。"
+                "不要点左下「离开」：停在当前城市上时，离开会回城。",
+                Scene.WORLD_MAP,
+                matches=matches,
+            )
+        return verbs.leave_room(
+            self,
+            image_bgr,
+            clf,
+            Scene.WORLD_MAP,
+            "左上角是「阿格莱恩」。点击左下「离开」，进入克里斯汀区域地图。",
+            matches=matches,
+        )
+
+    def _plan_turn_in_city(
+        self, image_bgr: np.ndarray, clf: Classification
+    ) -> StepResult:
+        """图兰顿城内：接取前点协会；之后点脸或带绿勾的卷轴。不点「探险」。"""
+        scene = clf.scene
+        if self.phase is Phase.ACCEPT:
+            match = verbs.best_of(
+                self,
+                image_bgr,
+                ("city_turandon_association", "city_association"),
+            )
+            matches = list(clf.matches)
+            if match is not None:
+                matches = _merge_match(matches, match)
+                return self._click_result(scene, clf, matches, match, "进入协会。")
+            missing = "已识别为图兰顿沙漠城内，但没有匹配到「协会」。"
+            return StepResult(
+                scene=scene,
+                reason=clf.reason,
+                matches=matches,
+                action=PlannedAction(kind="halt", label="未找到协会", message=missing),
+                status="halt_missing",
+                message=missing,
+            )
+
+        opened = verbs.open_quest_scroll(
+            self,
+            image_bgr,
+            clf,
+            scene,
+            _TURN_IN_SCROLL_MESSAGE,
+        )
+        if opened is not None:
+            return opened
+        talked = verbs.talk_portrait(
+            self,
+            image_bgr,
+            clf,
+            scene,
+            self.recipe.npc_template,
+            _ADVENTURER_MESSAGE,
+        )
+        if talked is not None:
+            return talked
+        waiting = (
+            "城内还没有可对话的冒险者，卷轴上也没有完成勾。"
+            "先等下一帧，不点「探险」，也不点「扫荡」。"
+        )
+        return StepResult(
+            scene=scene,
+            reason=clf.reason,
+            matches=list(clf.matches),
+            action=PlannedAction(kind="wait", label="等待冒险者", message=waiting),
+            status="skip_unknown",
+            message=waiting,
+        )
+
+    def _plan_multi_city(self, image_bgr: np.ndarray, clf: Classification) -> StepResult:
+        """图兰顿城内：接取前点协会；没打完点「探险」；打完点脸或绿勾卷轴。"""
+        scene = clf.scene
+        required = self.recipe.fights_required
+        if self.fights_done >= required:
+            opened = verbs.open_quest_scroll(
+                self,
+                image_bgr,
+                clf,
+                scene,
+                "三次正式战斗已经打完。点击带绿勾的任务卷轴，不要点旁边的邮件或背包。",
+            )
+            if opened is not None:
+                return opened
+            talked = verbs.talk_portrait(
+                self,
+                image_bgr,
+                clf,
+                scene,
+                self.recipe.npc_template,
+                "点击左下角冒险者的脸，不要点右侧三点气泡。对话后再点「跳过剧情」。",
+            )
+            if talked is not None:
+                return talked
+            waiting = (
+                "三次战斗已经打完。城内还没有冒险者的脸，卷轴上也没有完成勾。"
+                "先等下一帧，不点「探险」，也不点「扫荡」。"
+            )
+            return StepResult(
+                scene=scene,
+                reason=clf.reason,
+                matches=list(clf.matches),
+                action=PlannedAction(kind="wait", label="等待冒险者", message=waiting),
+                status="skip_unknown",
+                message=waiting,
+            )
+        if self.phase is Phase.ACCEPT:
+            match = verbs.best_of(
+                self,
+                image_bgr,
+                ("city_turandon_association", "city_association"),
+            )
+            matches = list(clf.matches)
+            if match is not None:
+                matches = _merge_match(matches, match)
+                return self._click_result(scene, clf, matches, match, "进入协会。")
+            missing = "已在图兰顿沙漠城内，但没有匹配到「协会」。"
+            return StepResult(
+                scene=scene,
+                reason=clf.reason,
+                matches=matches,
+                action=PlannedAction(kind="halt", label="未找到协会", message=missing),
+                status="halt_missing",
+                message=missing,
+            )
+        return self._click_or_missing(
+            image_bgr,
+            clf,
+            scene,
+            "city_explore",
+            click_message="接取后从城内右下「探险」进入图兰顿沙漠地区，去打 9-7。不点「扫荡」。",
+            missing_label="未找到探险",
+            missing_message="已在城内，但没有匹配到右下「探险」。不会改点别的建筑。",
+        )
+
+    def _plan_desert_map(self, image_bgr: np.ndarray, clf: Classification) -> StepResult:
+        """图兰顿沙漠地区：没打完点 9-7；打完点「回程」。"""
+        required = self.recipe.fights_required
+        if self.fights_done >= required:
+            return self._click_or_missing(
+                image_bgr,
+                clf,
+                Scene.STAGE_DESERT,
+                "stage_return",
+                click_message="三次正式战斗已完成。点左下「回程」回到图兰顿沙漠城内。",
+                missing_label="未找到回程",
+                missing_message="要回城，但没有匹配到「回程」。不会改点「矿洞」或「探索队」。",
+            )
+        flag = self.recipe.stage_flag_template or "stage_flag_9_7"
+        return self._click_or_missing(
+            image_bgr,
+            clf,
+            Scene.STAGE_DESERT,
+            flag,
+            click_message="在图兰顿沙漠地区点击 9-7。这条委托只打这一关。",
+            missing_label="未找到 9-7",
+            missing_message="已在图兰顿沙漠地区，但没有匹配到 9-7，不会改点其他旗帜。",
+        )
+
+    def _plan_stage_9_7(self, image_bgr: np.ndarray, clf: Classification) -> StepResult:
+        """巡逻走廊 9-7：左侧「初步探索」时点「进入」；满三次后点左下「离开」。"""
+        matches = list(clf.matches)
+        title = self._require(image_bgr, "stage_9_7_title")
+        if title is not None:
+            matches = _merge_match(matches, title)
+        if title is None:
+            missing = "这不是巡逻走廊 9-7。不会在这里点「进入」或「扫荡」。"
+            return StepResult(
+                scene=clf.scene,
+                reason=clf.reason,
+                matches=matches,
+                action=PlannedAction(kind="halt", label="不是 9-7", message=missing),
+                status="halt_missing",
+                message=missing,
+            )
+        required = self.recipe.fights_required
+        if self.fights_done >= required:
+            return verbs.leave_stage_select(
+                self,
+                image_bgr,
+                clf,
+                Scene.STAGE_9_7,
+                f"已完成 {self.fights_done}/{required} 次正式战斗。点左下「离开」，不要点「扫荡」。",
+            )
+        basic = verbs.best_of(self, image_bgr, ("stage_node_basic", "stage_node_basic_09"))
+        if basic is not None:
+            matches = _merge_match(matches, basic)
+        width = image_bgr.shape[1]
+        if basic is None or basic.box.center[0] > width * 0.45:
+            missing = "9-7 上没有在左侧看到「初步探索」。不会改点深入或完全，也不会点「扫荡」。"
+            return StepResult(
+                scene=Scene.STAGE_9_7,
+                reason=clf.reason,
+                matches=matches,
+                action=PlannedAction(kind="halt", label="未选初步探索", message=missing),
+                status="halt_missing",
+                message=missing,
+            )
+        return verbs.press_stage_enter(
+            self,
+            image_bgr,
+            clf,
+            Scene.STAGE_9_7,
+            "stage_enter_gold",
+            f"9-7-1「初步探索」已在左侧。点金色「进入」。"
+            f"当前 {self.fights_done}/{required} 次正式战斗。不要点「扫荡」。",
+            matches=matches,
+        )
+
+    def _plan_stage_event(self, image_bgr: np.ndarray, clf: Classification) -> StepResult:
+        """特殊事件不算次数。点「确定」正中，随后的掉落页也不计数。"""
+        self.loot_kind = "event"
+        return verbs.confirm_dialog(
+            self,
+            image_bgr,
+            clf,
+            "stage_event_ok",
+            "这是特殊事件，不计入三次战斗。点「确定」正中，关掉掉落后再点「进入」。",
+            Scene.STAGE_EVENT,
+        )
+
+    def _plan_multi_victory(self, image_bgr: np.ndarray, clf: Classification) -> StepResult:
+        """「战斗胜利」才算一次。同一张胜利页重复规划不重复计数。"""
+        required = self.recipe.fights_required
+        if not self.victory_counted:
+            self.fights_done += 1
+            self.victory_counted = True
+        self.loot_kind = "victory"
+        self.battle_started_at = None
+        if self.phase in {Phase.ACCEPT, Phase.GO_STAGE}:
+            self.phase = Phase.IN_BATTLE
+        matches = list(clf.matches)
+        touch = self._require(image_bgr, "touch_continue")
+        message = (
+            f"正式战斗胜利，记为第 {self.fights_done}/{required} 次。"
+            "点「触摸继续」。事件弹窗不会计入。"
+        )
+        if touch:
+            matches = _merge_match(matches, touch)
+            return self._click_result(Scene.VICTORY, clf, matches, touch, message)
+        height, width = image_bgr.shape[:2]
+        x, y = width // 2, int(round(height * 1295 / 1920))
+        action = PlannedAction(
+            kind="click",
+            label="触摸继续",
+            x=x,
+            y=y,
+            message=message,
+        )
+        return StepResult(
+            scene=Scene.VICTORY,
+            reason=clf.reason,
+            matches=matches,
+            action=action,
+            status="continue",
+            message=action.brief(),
+        )
+
+    def _plan_multi_loot(self, image_bgr: np.ndarray, clf: Classification) -> StepResult:
+        """事件掉落和战斗掉落都只关掉。任务结算只在领取阶段。"""
+        kind = self.loot_kind
+        self.loot_kind = None
+        required = self.recipe.fights_required
+        if kind == "event":
+            return verbs.dismiss_loot(
+                self,
+                image_bgr,
+                clf,
+                finishes_quest=False,
+                message="事件掉落，不增加战斗次数。关掉后回到选关，再点「进入」。",
+            )
+        if kind == "victory":
+            return verbs.dismiss_loot(
+                self,
+                image_bgr,
+                clf,
+                finishes_quest=False,
+                message=(
+                    f"战斗掉落。当前已完成 {self.fights_done}/{required} 次正式战斗。"
+                    "关掉后回到 9-7。"
+                ),
+            )
+        if self.phase is Phase.CLAIM:
+            return verbs.dismiss_loot(self, image_bgr, clf)
+        return verbs.dismiss_loot(
+            self,
+            image_bgr,
+            clf,
+            finishes_quest=False,
+            message="这不是任务结算。关掉后继续，不增加战斗次数。",
         )
 
     def _plan_world(self, image_bgr: np.ndarray, clf: Classification) -> StepResult:
@@ -230,42 +614,27 @@ class DailyCommissionTask(TaskBase):
 
     def _plan_association(self, image_bgr: np.ndarray, clf: Classification) -> StepResult:
         if self.phase in {Phase.GO_STAGE, Phase.IN_BATTLE, Phase.CLAIM}:
-            return self._click_or_missing(
-                image_bgr,
-                clf,
-                Scene.ASSOCIATION,
-                "association_leave",
-                click_message="委托已接取，从协会室内「离开」返回城内，再去点「探险」。",
-                missing_label="未找到离开",
-                missing_message="已接取委托并识别为协会室内，但没有匹配到「离开」。",
-                delay_sec=config.CLOSE_ANIMATION_SEC,
-            )
-        return self._click_or_missing(
-            image_bgr,
-            clf,
-            Scene.ASSOCIATION,
-            "association_commission",
-            click_message="打开协会右下角的委托中心。",
-            missing_label="未找到委托按钮",
-            missing_message="已识别为协会室内，但没有匹配到右下角「委托」。",
-        )
+            if self.recipe.kind is CommissionKind.TURN_IN:
+                message = "委托已接取，从协会「离开」返回图兰顿沙漠城内，再去点冒险者的脸。"
+            else:
+                message = "委托已接取，从协会室内「离开」返回城内，再去点「探险」。"
+            return verbs.leave_room(self, image_bgr, clf, Scene.ASSOCIATION, message)
+        return verbs.open_commission_board(self, image_bgr, clf)
 
     def _plan_commission_list(
         self, image_bgr: np.ndarray, clf: Classification
     ) -> StepResult:
         matches = list(clf.matches)
         if self.phase in {Phase.GO_STAGE, Phase.IN_BATTLE, Phase.CLAIM}:
-            back = self._require(image_bgr, "quest_detail_back")
-            if back:
-                matches = _merge_match(matches, back)
-                return self._click_result(
-                    Scene.COMMISSION_LIST,
-                    clf,
-                    matches,
-                    back,
-                    "委托已接取，用右上返回关闭列表，等动画后再点协会「离开」。",
-                    delay_sec=config.CLOSE_ANIMATION_SEC,
-                )
+            closed = verbs.close_with_back(
+                self,
+                image_bgr,
+                clf,
+                Scene.COMMISSION_LIST,
+                "委托已接取，用右上返回关闭列表，等动画后再点协会「离开」。",
+            )
+            if closed is not None:
+                return closed
             return StepResult(
                 scene=Scene.COMMISSION_LIST,
                 reason=clf.reason,
@@ -273,40 +642,24 @@ class DailyCommissionTask(TaskBase):
                 action=PlannedAction(
                     kind="wait",
                     label="委托已接取",
-                    message="已接取委托，不再点击列表里的卡片。请离开本页后前往城内「探险」。",
+                    message=(
+                    "已接取委托，不再点击列表里的卡片。请离开本页后返回城内。"
+                    if self.recipe.kind is CommissionKind.TURN_IN
+                    else "已接取委托，不再点击列表里的卡片。请离开本页后前往城内「探险」。"
+                ),
                 ),
                 status="skip_unknown",
                 message="已接取委托，当前仍停在委托列表。跳过本帧，等待城内或关卡画面。",
             )
-        match = self._require(image_bgr, "commission_zhazha_bulin")
-        if match:
-            matches = _merge_match(matches, match)
-            return self._click_result(
-                Scene.COMMISSION_LIST,
-                clf,
-                matches,
-                match,
-                "打开优先委托「喳喳布林入侵」的任务详情。",
-            )
-        return StepResult(
-            scene=Scene.COMMISSION_LIST,
-            reason=clf.reason,
-            matches=matches,
-            action=PlannedAction(
-                kind="halt",
-                label=config.PRIORITY_COMMISSION,
-                message=CARD_MISSING_MESSAGE,
-            ),
-            status="halt_missing",
-            message=CARD_MISSING_MESSAGE,
-        )
+        return verbs.accept_listed_card(self, image_bgr, clf)
 
     def _plan_quest_detail(self, image_bgr: np.ndarray, clf: Classification) -> StepResult:
         matches = list(clf.matches)
         status_match = self._require(image_bgr, "quest_not_accepted")
         if status_match:
             matches = _merge_match(matches, status_match)
-        accepted = self._require(image_bgr, "quest_accepted_obj")
+        objective_id = self.recipe.objective_template
+        accepted = self._require(image_bgr, objective_id) if objective_id else None
         if accepted:
             matches = _merge_match(matches, accepted)
         finish = self._require(image_bgr, "quest_finish")
@@ -314,15 +667,9 @@ class DailyCommissionTask(TaskBase):
             matches = _merge_match(matches, finish)
 
         if self.phase in {Phase.CLAIM, Phase.IN_BATTLE, Phase.DONE} or finish:
-            if finish:
-                self.phase = Phase.CLAIM
-                return self._click_result(
-                    Scene.QUEST_DETAIL,
-                    clf,
-                    matches,
-                    finish,
-                    "在任务详情中下部点「完成」领取奖励，不要点屏幕最底部，也不要点返回箭头。",
-                )
+            tapped = verbs.tap_finish(self, image_bgr, clf, matches)
+            if tapped is not None:
+                return tapped
             return StepResult(
                 scene=Scene.QUEST_DETAIL,
                 reason=clf.reason,
@@ -336,32 +683,25 @@ class DailyCommissionTask(TaskBase):
                 message="任务详情页未找到「完成」按钮，停止以免点到返回或屏幕底部。",
             )
 
-        accept = self._require(image_bgr, "quest_accept")
-        if accept and self.phase is Phase.ACCEPT:
-            matches = _merge_match(matches, accept)
-            self.phase = Phase.GO_STAGE
-            return self._click_result(
-                Scene.QUEST_DETAIL,
-                clf,
-                matches,
-                accept,
-                "接取优先委托。之后用右上返回关闭详情，等动画再关列表、离开协会。",
-            )
+        received = verbs.press_receive(self, image_bgr, clf, matches)
+        if received is not None:
+            return received
 
         # 已经接过（没有「接收」，或本会话已点过接收）：关详情。
+        accept = self._require(image_bgr, "quest_accept")
         if self.phase is Phase.ACCEPT and (accepted or accept is None):
             self.phase = Phase.GO_STAGE
-        back = self._require(image_bgr, "quest_detail_back")
-        if back and self.phase is Phase.GO_STAGE:
-            matches = _merge_match(matches, back)
-            return self._click_result(
-                Scene.QUEST_DETAIL,
+        if self.phase is Phase.GO_STAGE:
+            closed = verbs.close_with_back(
+                self,
+                image_bgr,
                 clf,
-                matches,
-                back,
+                Scene.QUEST_DETAIL,
                 "委托已接取，用卡片右上返回关闭详情（不要点屏幕底部「离开」），等动画后再关列表。",
-                delay_sec=config.CLOSE_ANIMATION_SEC,
+                matches=matches,
             )
+            if closed is not None:
+                return closed
         if self.phase is Phase.GO_STAGE:
             return StepResult(
                 scene=Scene.QUEST_DETAIL,
@@ -414,28 +754,26 @@ class DailyCommissionTask(TaskBase):
 
         # 战后回到 1-3：小孩已消失，右上卷轴带绿勾。点卷轴本体，不要点邮件/背包。
         if check or scroll:
-            self.phase = Phase.CLAIM
-            target = scroll or check
-            assert target is not None
-            return self._click_result(
-                Scene.STAGE_1_3,
-                clf,
-                matches,
-                target,
-                "战斗已结束，点击右上带绿勾的任务卷轴打开任务日志（不要点邮件或背包）。",
+            opened = verbs.open_quest_scroll(
+                self, image_bgr, clf, Scene.STAGE_1_3, _SCROLL_MESSAGE
             )
+            if opened is not None:
+                return opened
 
         # 本委托：先与小孩对话，不要先点「进入」。
         if npc:
-            if self.phase in {Phase.ACCEPT, Phase.GO_STAGE}:
-                self.phase = Phase.IN_BATTLE
-            return self._click_result(
-                Scene.STAGE_1_3,
+            talked = verbs.talk_portrait(
+                self,
+                image_bgr,
                 clf,
-                matches,
-                npc,
-                "点击左下角小孩头像（不要点边缘对话气泡）。对话出现后点右上「跳过剧情」，会直接进入战斗。",
+                Scene.STAGE_1_3,
+                self.recipe.npc_template,
+                _CHILD_MESSAGE,
             )
+            if talked is not None:
+                if self.phase in {Phase.ACCEPT, Phase.GO_STAGE}:
+                    self.phase = Phase.IN_BATTLE
+                return talked
 
         nodes = find_explore_nodes(image_bgr, self.specs, ocr=self.ocr)
         for node in nodes:
@@ -530,19 +868,21 @@ class DailyCommissionTask(TaskBase):
         )
 
     def _plan_story_dialog(self, image_bgr: np.ndarray, clf: Classification) -> StepResult:
-        if self.phase is Phase.ACCEPT:
-            self.phase = Phase.IN_BATTLE
-        elif self.phase is Phase.GO_STAGE:
-            self.phase = Phase.IN_BATTLE
-        return self._click_or_missing(
-            image_bgr,
-            clf,
-            Scene.STORY_DIALOG,
-            "skip_story",
-            click_message="点击右上角「跳过剧情」。战前对话跳过会直接进入战斗。",
-            missing_label="未找到跳过剧情",
-            missing_message="已识别为剧情对话，但没有匹配到右上角「跳过剧情」。",
-        )
+        if self.recipe.kind is CommissionKind.TURN_IN:
+            self.phase = Phase.CLAIM
+            message = (
+                "点击右上角「跳过剧情」。失落的圣遗物已在背包时，跳过即完成上交，"
+                "不必再去图兰顿要塞，也不进入战斗。"
+            )
+        elif self.recipe.kind is CommissionKind.MULTI_BATTLE:
+            if self.fights_done >= self.recipe.fights_required:
+                self.phase = Phase.CLAIM
+            message = "点击右上角「跳过剧情」。跳过之后冒险者消失，右上卷轴出现绿勾。"
+        else:
+            if self.phase in {Phase.ACCEPT, Phase.GO_STAGE}:
+                self.phase = Phase.IN_BATTLE
+            message = "点击右上角「跳过剧情」。战前对话跳过会直接进入战斗。"
+        return verbs.skip_story(self, image_bgr, clf, message)
 
     def _plan_battle(self, image_bgr: np.ndarray, clf: Classification) -> StepResult:
         if self.phase in {Phase.ACCEPT, Phase.GO_STAGE}:
@@ -612,32 +952,18 @@ class DailyCommissionTask(TaskBase):
         )
 
     def _plan_quest_log(self, image_bgr: np.ndarray, clf: Classification) -> StepResult:
+        opened = verbs.click_quest_title(self, image_bgr, clf)
+        if opened is not None:
+            return opened
+
         matches = list(clf.matches)
-        row = self._require(image_bgr, "quest_log_zhazha")
-        if row:
-            matches = _merge_match(matches, row)
-        stamp = self._require(image_bgr, "quest_complete_stamp")
-        if stamp:
-            matches = _merge_match(matches, stamp)
-        done_text = self._require(image_bgr, "quest_complete_text")
-        if done_text:
-            matches = _merge_match(matches, done_text)
-
-        if row:
-            if self.phase is not Phase.DONE:
-                self.phase = Phase.CLAIM
-            return self._click_result(
-                Scene.QUEST_LOG,
-                clf,
-                matches,
-                row,
-                "先点击任务标题「喳喳布林入侵」打开详情，不要点列表上的绿色「完成」印章。",
-            )
-
         if self.phase in {Phase.CLAIM, Phase.DONE} or self.loot_claimed:
             self.phase = Phase.DONE
             return self._done(clf, matches=matches)
 
+        missing = (
+            f"任务日志已打开，但没有看到「{self.recipe.name}」。可能尚未完成或已领取。"
+        )
         return StepResult(
             scene=Scene.QUEST_LOG,
             reason=clf.reason,
@@ -645,43 +971,14 @@ class DailyCommissionTask(TaskBase):
             action=PlannedAction(
                 kind="wait",
                 label="任务日志中没有该委托",
-                message="任务日志已打开，但没有看到「喳喳布林入侵」。可能尚未完成或已领取。",
+                message=missing,
             ),
             status="skip_unknown",
-            message="任务日志中没有「喳喳布林入侵」，跳过本帧。",
+            message=missing,
         )
 
     def _plan_loot(self, image_bgr: np.ndarray, clf: Classification) -> StepResult:
-        self.phase = Phase.CLAIM
-        self.loot_claimed = True
-        matches = list(clf.matches)
-        touch = self._require(image_bgr, "loot_touch")
-        if touch:
-            matches = _merge_match(matches, touch)
-            return self._click_result(
-                Scene.LOOT_REWARD,
-                clf,
-                matches,
-                touch,
-                "领取奖励，在「获得物品」上点击「触摸继续」。",
-            )
-        h, w = image_bgr.shape[:2]
-        x, y = w // 2, int(round(h * 1212 / 1920))
-        action = PlannedAction(
-            kind="click",
-            label="触摸继续",
-            x=x,
-            y=y,
-            message="已出现「获得物品」，点击弹窗上的「触摸继续」。",
-        )
-        return StepResult(
-            scene=Scene.LOOT_REWARD,
-            reason=clf.reason,
-            matches=matches,
-            action=action,
-            status="continue",
-            message=action.message,
-        )
+        return verbs.dismiss_loot(self, image_bgr, clf)
 
     def _done(
         self,
@@ -690,6 +987,7 @@ class DailyCommissionTask(TaskBase):
         matches: list[Match] | None = None,
     ) -> StepResult:
         self.phase = Phase.DONE
+        message = verbs.claim_done_message(self.recipe.name)
         return StepResult(
             scene=clf.scene,
             reason=clf.reason,
@@ -697,10 +995,10 @@ class DailyCommissionTask(TaskBase):
             action=PlannedAction(
                 kind="halt",
                 label="委托完成",
-                message=CLAIM_DONE_MESSAGE,
+                message=message,
             ),
             status="done",
-            message=CLAIM_DONE_MESSAGE,
+            message=message,
         )
 
     def _click_or_missing(

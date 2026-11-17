@@ -4,8 +4,8 @@
 在哪张 1080×1920 实走截图上、要点哪里。配方只引用这里的地点，后续给其他地区
 的委托规划路线时，先补这条记录，再补城内协会和委托板。
 
-地图滑动后标签会跟着移动，所以规划时先做模板匹配；记录坐标只作为已经确认
-在对应区域地图、且模板没打上时的备选。
+地图滑动后标签会跟着移动。规划时先认地名；看不见就平移，直到名称进入画面再点。
+记录坐标只说明某张实走截图上标签曾经在哪，不能在标签不在画面上时拿来猜点。
 """
 
 from __future__ import annotations
@@ -58,6 +58,10 @@ class MapPlace:
     region: Region
     map_label_template: str | None = None
     map_label_fallback: str | None = None
+    # 城内左上木牌上的地名。有了才用来确认是不是目标城，不拿来当整张城的底图。
+    city_title_template: str | None = None
+    # 相对布局，只用来判断该往哪边拉地图。+x 东，+y 南。绝不是点击坐标。
+    layout_east_south: tuple[float, float] | None = None
     map_click: tuple[int, int] | None = None
     map_click_source: str | None = None
     map_click_box: tuple[int, int, int, int] | None = None
@@ -84,7 +88,8 @@ AGLAEN = Region(
     inbound_tab_source="tests/fixtures/turn_in/01_region_crystia.png",
     notes=(
         "左上蓝色横幅「阿格莱恩 / Allgreen Independent Kingdom」。"
-        "去克里斯汀时，要先把地图滑到南边海边，点「前往克里斯汀」页签；"
+        "去克里斯汀时，先把地图滑到南边的「浪人岬」，再手指从左向右滑，"
+        "把左边被切掉的「前往克里斯汀」整块拉出来再点；"
         "这个页签不是常驻底栏，停在王城附近时看不见。"
         "不要用左下「离开」切换区域：停在当前城市上时，离开会回城。"
     ),
@@ -111,6 +116,7 @@ LILITOS = MapPlace(
     region=AGLAEN,
     map_label_template="world_lilitos_full",
     map_label_fallback="world_lilitos",
+    layout_east_south=(0.0, 0.0),
     map_click=(660, 648),
     map_click_source="tests/fixtures/walkthrough/02_world_lilitos.png",
     map_click_box=(515, 615, 290, 67),
@@ -126,6 +132,7 @@ LIANHU = MapPlace(
     name="莉安湖",
     region=AGLAEN,
     map_label_template="world_lianhu",
+    layout_east_south=(1.0, 1.0),
     map_click=(875, 1121),
     map_click_source="tests/fixtures/walkthrough/02_world_lilitos.png",
     map_click_box=(790, 1088, 170, 67),
@@ -137,6 +144,8 @@ BEI_SERAM = MapPlace(
     name="北赛拉姆",
     region=AGLAEN,
     map_label_template="world_bei_seram",
+    city_title_template="city_title_bei_seram",
+    layout_east_south=(-1.0, 1.0),
     map_click=(136, 1311),
     map_click_source="tests/fixtures/walkthrough/02_world_lilitos.png",
     map_click_box=(18, 1278, 237, 67),
@@ -151,6 +160,7 @@ NAN_SERAM = MapPlace(
     name="南赛拉姆",
     region=AGLAEN,
     map_label_template="world_nan_seram",
+    layout_east_south=(0.0, 2.0),
     map_click=(630, 880),
     map_click_source="tests/fixtures/walkthrough/01_world_south.png",
     map_click_box=(535, 850, 190, 60),
@@ -165,6 +175,7 @@ LANGREN = MapPlace(
     name="浪人岬",
     region=AGLAEN,
     map_label_template="world_langren",
+    layout_east_south=(0.2, 3.0),
     map_click=(825, 1580),
     map_click_source="tests/fixtures/walkthrough/01_world_south.png",
     map_click_box=(720, 1545, 210, 70),
@@ -176,6 +187,7 @@ TURANDON = MapPlace(
     name="图兰顿沙漠",
     region=CRYSTIA,
     map_label_template="region_turandon",
+    layout_east_south=(0.0, 1.2),
     map_click=(475, 1020),
     map_click_source="tests/fixtures/turn_in/01_region_crystia.png",
     map_click_box=(258, 984, 434, 72),
@@ -191,6 +203,7 @@ NAR = MapPlace(
     name="纳尔本",
     region=CRYSTIA,
     map_label_template="region_nar",
+    layout_east_south=(1.6, 0.4),
     map_click=(990, 537),
     map_click_source="tests/fixtures/turn_in/01_region_crystia.png",
     map_click_box=(900, 500, 180, 75),
@@ -202,13 +215,33 @@ NAR = MapPlace(
 
 SAINT_CASARE = MapPlace(
     id="st_casare",
-    name="圣卡萨雷",
+    name="圣卡萨雷斯",
     region=CRYSTIA,
     map_label_template="region_st_casare",
+    layout_east_south=(1.1, 1.3),
     map_click=(970, 1225),
     map_click_source="tests/fixtures/turn_in/01_region_crystia.png",
     map_click_box=(860, 1188, 220, 74),
-    notes="克里斯汀地图右侧的地点，截图右侧略裁切。城内路线尚未走查。",
+    notes=(
+        "克里斯汀地图右侧的地点。正确全称是「圣卡萨雷斯」。"
+        "现有截图右侧略裁切，飘带上只露出「圣卡萨雷」。城内路线尚未走查。"
+    ),
+)
+
+LITRILE = MapPlace(
+    id="litrile",
+    name="利特利尔大区",
+    region=CRYSTIA,
+    map_label_template="world_litrile",
+    city_title_template="city_title_litrile",
+    layout_east_south=(0.2, 0.0),
+    map_click=(480, 765),
+    map_click_source="tests/fixtures/navigation/crystia_west_litrile.png",
+    map_click_box=(330, 730, 300, 70),
+    notes=(
+        "克里斯汀西侧、粉树一带。实拍在 tests/fixtures/navigation/crystia_west_litrile.png。"
+        "看见「利特利尔大区」飘带再点。这张图上的记录中心是 (480, 765)，地图滑开后不能拿它盲点。"
+    ),
 )
 
 REGIONS: dict[str, Region] = {
@@ -225,14 +258,11 @@ PLACES: tuple[MapPlace, ...] = (
     TURANDON,
     NAR,
     SAINT_CASARE,
+    LITRILE,
 )
 
 PLACES_BY_ID: dict[str, MapPlace] = {place.id: place for place in PLACES}
 PLACES_BY_NAME: dict[str, MapPlace] = {place.name: place for place in PLACES}
-
-# 利特利尔大区还不在这张表里。「受困的同伴」因此停住。
-# 不要补一个没有实走截图的坐标或城市点击。
-
 
 def places_in(region: Region) -> tuple[MapPlace, ...]:
     """某一片区域地图上已经记录的地点，按图谱顺序。"""

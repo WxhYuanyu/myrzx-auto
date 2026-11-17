@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from enum import Enum
 
 from src import config
-from src.tasks.locations import BEI_SERAM, LIANHU, LILITOS, MapPlace, NAR, TURANDON
+from src.tasks.locations import BEI_SERAM, LIANHU, LILITOS, LITRILE, MapPlace, NAR, TURANDON
 from src.vision.types import Scene
 
 
@@ -290,8 +290,7 @@ TRAPPED_COMPANION = CommissionRecipe(
     objective_template=None,
     npc_template="npc_trapped_companion",
     objective_text="利特利尔大区清 8-B4 初步探索",
-    location=None,
-    unmapped_place="利特利尔大区",
+    location=LITRILE,
     stage_flag_template="stage_flag_8_b4",
     stage_node="basic",
     stage_label="8-B4",
@@ -315,8 +314,8 @@ TRAPPED_COMPANION = CommissionRecipe(
         "claim",
     ),
     summary=(
-        "受困的同伴：利特利尔大区，标准类型1，清 8-B4 初步探索（不是深入或完全）。"
-        "这片区域还不在地图册里，找不到就停，不编造坐标。"
+        "受困的同伴：利特利尔大区在克里斯汀西侧，标准类型1，清 8-B4 初步探索"
+        "（不是深入或完全）。大地图上看见「利特利尔大区」再点，不编造坐标。"
     ),
 )
 

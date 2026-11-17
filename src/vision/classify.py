@@ -69,7 +69,6 @@ def classify_scene(
         "world_lilitos",
         "world_lilitos_full",
         "world_crystia",
-        "city_association",
         "city_capital_subtitle",
         "city_turandon_title",
         "association_commission",

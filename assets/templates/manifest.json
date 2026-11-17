@@ -47,10 +47,10 @@
         436
       ],
       "scene": "CITY_LILITOS",
-      "role": "click_target",
+      "role": "click_only",
       "label": "协会",
       "click_target": true,
-      "notes": "城内节点图被裁得很紧，几乎没有完整标题。金色「协会」标签是目前最稳的定位点，同时作为场景标记。",
+      "notes": "城内「协会」金字。各城共用这栋建筑，只在标题已经确认是目标城市时才点。不能用来把画面判成王城莉莉托斯。",
       "width": 64,
       "height": 34
     },
@@ -191,10 +191,10 @@
         826
       ],
       "scene": "CITY_LILITOS",
-      "role": "click_target",
+      "role": "click_only",
       "label": "探险",
       "click_target": true,
-      "notes": "城内右下底栏「探险」。原截图底边略裁到「险」字下沿，仍是目前最稳的导航按钮。02 裁切图没有底栏。",
+      "notes": "城内右下底栏「探险」。原截图底边略裁到「险」字下沿。不作场景标记，避免别的城因为这块底栏被当成王城莉莉托斯。02 裁切图没有底栏。",
       "width": 188,
       "height": 71
     },
@@ -879,24 +879,28 @@
     {
       "id": "world_crystia",
       "file": "world_crystia.png",
-      "source": "01_region_crystia.png",
+      "source": "tests/fixtures/navigation/crystia_west_litrile.png",
       "crop": [
-        18,
-        252,
-        750,
-        398
+        148,
+        248,
+        528,
+        343
       ],
       "scene": "REGION_CRYSTIA",
       "role": "scene_marker",
       "label": "克里斯汀",
       "click_target": false,
-      "threshold": 0.9,
       "scales": [
-        1.0
+        1.0,
+        0.9,
+        1.1,
+        2.0,
+        2.2,
+        2.25
       ],
-      "notes": "克里斯汀区域地图左上地名横幅，含英文 The United Realms of Crystia。用来确认当前位置，再点「图兰顿沙漠」。不作点击。",
-      "width": 732,
-      "height": 146
+      "notes": "克里斯汀大地图左上紧裁标题：徽记加「克里斯汀」，不含英文副标题和背景。和阿格莱恩标题一样走多尺度。旧的 732×146 整条横幅只在 scale 1.0、阈值 0.9 时才能对上，实机略有偏差就失败。不作点击。",
+      "width": 380,
+      "height": 95
     },
     {
       "id": "region_turandon",
@@ -916,7 +920,7 @@
       "scales": [
         1.0
       ],
-      "notes": "克里斯汀地图上的金色「图兰顿沙漠」飘带。只点这处进城，不点纳尔本、圣卡萨雷或其他地名。和城内木牌标题不是同一张图。",
+      "notes": "克里斯汀地图上的金色「图兰顿沙漠」飘带。只点这处进城，不点纳尔本、圣卡萨雷斯或其他地名。和城内木牌标题不是同一张图。",
       "width": 434,
       "height": 72
     },
@@ -1148,7 +1152,7 @@
         0,
         1596,
         428,
-        1678
+        1648
       ],
       "scene": "WORLD_MAP",
       "role": "click_only",
@@ -1158,9 +1162,9 @@
       "scales": [
         1.0
       ],
-      "notes": "阿格莱恩大地图左下的区域页签「前往克里斯汀」。多场战斗从这里切到克里斯汀。不要点更下面的「离开」：停在当前城市上时，离开会回城。",
+      "notes": "阿格莱恩南边船上的「前往克里斯汀」金色旗帜，只裁整块按钮（前、往两个小字，克里斯汀两侧有箭头），不含草地。只露出右半截时对不上，不要点。停在地图最上侧时先南滑到「浪人岬」，再手指从左向右滑，把左边的内容拉进画面。不要点更下面的「离开」。",
       "width": 428,
-      "height": 82
+      "height": 52
     },
     {
       "id": "commission_eager_adventurer",
@@ -1431,10 +1435,10 @@
       "file": "city_world_map.png",
       "source": "03_city.png",
       "crop": [
-        600,
-        1288,
-        840,
-        1478
+        606,
+        1386,
+        834,
+        1450
       ],
       "scene": "CITY_LILITOS",
       "role": "click_only",
@@ -1442,11 +1446,85 @@
       "click_target": true,
       "threshold": 0.9,
       "scales": [
-        1.0
+        1.0,
+        0.95,
+        0.9,
+        1.05
       ],
-      "notes": "城内节点图上「大地图」木牌（含上方地点钉）。点它回到区域地图。点击模板，不作为场景标记，以免把图兰顿城内误判成莉莉托斯。两座城的木牌位置不同，靠文字匹配，不写死坐标。",
+      "notes": "王城和图兰顿城内「大地图」木牌上的字。北赛拉姆这类草地城对不上这块，改用 city_world_map_text。两张认到任一就点，不写死坐标，也不作为场景标记。",
+      "width": 228,
+      "height": 64
+    },
+    {
+      "id": "city_world_map_text_alt",
+      "file": "city_world_map_text_alt.png",
+      "source": "tests/fixtures/navigation/city_litrile.png",
+      "crop": [520, 1288, 760, 1360],
+      "scene": null,
+      "role": "click_only",
+      "label": "大地图",
+      "click_target": true,
+      "threshold": 0.9,
+      "scales": [1.0, 0.9, 0.95, 1.05, 1.1],
+      "notes": "另一帧城内「大地图」三个字。北赛拉姆那张紧裁在这帧上不到 0.9。和另外两张认到任一就点，不是某座城的专用流程。",
       "width": 240,
-      "height": 190
+      "height": 72
+    },
+    {
+      "id": "city_title_litrile",
+      "file": "city_title_litrile.png",
+      "source": "tests/fixtures/navigation/city_litrile.png",
+      "crop": [48, 224, 530, 286],
+      "scene": null,
+      "role": "click_only",
+      "label": "利特利尔大区",
+      "click_target": false,
+      "threshold": 0.9,
+      "scales": [1.0, 0.9, 1.1, 2.0, 2.2],
+      "notes": "城内左上木牌上的「利特利尔大区」，只裁地名，不含整张城。用来确认是不是目标城，不作为场景底图。",
+      "width": 482,
+      "height": 62
+    },
+    {
+      "id": "city_title_bei_seram",
+      "file": "city_title_bei_seram.png",
+      "source": "tests/fixtures/navigation/city_bei_seram.png",
+      "crop": [36, 226, 420, 292],
+      "scene": null,
+      "role": "click_only",
+      "label": "北赛拉姆",
+      "click_target": false,
+      "threshold": 0.9,
+      "scales": [1.0, 0.9, 1.1, 2.0, 2.2],
+      "notes": "城内左上木牌上的「北赛拉姆」，只裁地名。和其他城的木牌同一套确认办法。",
+      "width": 384,
+      "height": 66
+    },
+    {
+      "id": "city_world_map_text",
+      "file": "city_world_map_text.png",
+      "source": "tests/fixtures/navigation/city_bei_seram.png",
+      "crop": [
+        555,
+        1390,
+        780,
+        1472
+      ],
+      "scene": null,
+      "role": "click_only",
+      "label": "大地图",
+      "click_target": true,
+      "threshold": 0.9,
+      "scales": [
+        1.0,
+        0.9,
+        0.95,
+        1.05,
+        1.1
+      ],
+      "notes": "各城共用的「大地图」三个字，带描边，尽量少带地面。从北赛拉姆实机图裁出。和 city_world_map、city_world_map_text_alt 任一命中即可点，不把协会、探险、农场、商店、酒馆当成它。",
+      "width": 225,
+      "height": 82
     },
     {
       "id": "association_lilitos_header",
@@ -1491,6 +1569,32 @@
       "notes": "克里斯汀地图右下「返阿格莱恩」页签。从克里斯汀回到阿格莱恩时点这里，不点左下「离开」。记录中心约 (887, 1815)。",
       "width": 375,
       "height": 106
+    },
+    {
+      "id": "world_litrile",
+      "file": "world_litrile.png",
+      "source": "tests/fixtures/navigation/crystia_west_litrile.png",
+      "crop": [
+        330,
+        730,
+        630,
+        800
+      ],
+      "scene": "REGION_CRYSTIA",
+      "role": "click_only",
+      "label": "利特利尔大区",
+      "click_target": true,
+      "threshold": 0.9,
+      "scales": [
+        1.0,
+        0.9,
+        1.1,
+        2.0,
+        2.2
+      ],
+      "notes": "克里斯汀地图上的金色「利特利尔大区」飘带，只裁整块旗帜。看见名字再点，不记录成可以盲点的坐标。属克里斯汀西侧。",
+      "width": 300,
+      "height": 70
     },
     {
       "id": "world_lianhu",
@@ -1592,13 +1696,13 @@
       ],
       "scene": "REGION_CRYSTIA",
       "role": "click_only",
-      "label": "圣卡萨雷",
+      "label": "圣卡萨雷斯",
       "click_target": true,
       "threshold": 0.9,
       "scales": [
         1.0
       ],
-      "notes": "克里斯汀地图右侧的金色「圣卡萨雷」（截图右侧略裁切）。属克里斯汀。记录中心 (970, 1225)。城内路线尚未走查。",
+      "notes": "克里斯汀地图右侧的金色地名。正确全称是「圣卡萨雷斯」；现有截图右侧略裁切，飘带上只露出「圣卡萨雷」。属克里斯汀。记录中心 (970, 1225)。城内路线尚未走查。不另做全屏模板。",
       "width": 220,
       "height": 74
     },

@@ -108,8 +108,8 @@ CLOSE_ANIMATION_SEC = 0.8
 # 战斗自动进行，只轮询截图直到胜利；时限要留足几分钟。
 BATTLE_TIMEOUT_SEC = 240.0
 BATTLE_POLL_SEC = 0.8
-# 世界地图若停在南赛拉姆、看不见王城莉莉托斯，向下滑动几次再放弃。
-MAP_SWIPE_MAX = 4
+# 大区地图从最南滑到最北（浪人岬到王城）不止 4 下。换方向时计数会重置。
+MAP_SWIPE_MAX = 8
 
 # 委托相关。类型1按屏幕原文「喳喳布林入侵」。
 PRIORITY_COMMISSION = "喳喳布林入侵"

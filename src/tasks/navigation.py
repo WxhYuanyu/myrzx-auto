@@ -360,6 +360,14 @@ def _halt_unrecognized_exit(clf: Any) -> StepResult:
     return _halt(clf, clf.scene, "认不出退回", missing)
 
 
+CITY_WORLD_MAP_BUTTONS = ("city_world_map", "city_world_map_text")
+
+
+def find_city_world_map(task: Any, image: np.ndarray) -> Match | None:
+    """城里的「大地图」三个字。王城木牌和各城共用的紧裁文字，认到任一即可。"""
+    return verbs.best_of(task, image, CITY_WORLD_MAP_BUTTONS)
+
+
 def _click_corner_leave(task: Any, image: np.ndarray, clf: Any) -> StepResult | None:
     """还没回到大地图时，左下「离开」就点。不限选关页，也不点屏幕中部的按钮。"""
     match = verbs.best_of(task, image, ("stage_leave", "association_leave"))
@@ -403,7 +411,7 @@ def _return_until_continent(
         return task._plan_open_world_map(
             image, clf, clf.scene, here=city, returning=True
         )
-    if task._require(image, "city_world_map") is not None:
+    if find_city_world_map(task, image) is not None:
         return task._plan_open_world_map(
             image, clf, clf.scene, here=city, returning=True
         )

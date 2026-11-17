@@ -410,23 +410,23 @@ class DailyCommissionTask(TaskBase):
         place = self._place()
         target = f"「{place.name}」" if place else "目标城市"
         current = f"「{here}」" if here else "城内"
-        match = self._require(image_bgr, "city_world_map")
+        match = navigation.find_city_world_map(self, image_bgr)
         matches = list(clf.matches)
         if returning:
             click_message = (
                 "先退回大地图，直到看见「阿格莱恩」或「克里斯汀」。"
-                f"当前在{current}，点「大地图」。"
-                "不点本城的「协会」或「探险」。"
+                f"当前在{current}，点「大地图」三个字。"
+                "不点本城的「协会」「探险」「农场」「商店」「酒馆」「挑战任务」或对话气泡。"
             )
             missing = (
-                f"要先从{current}退回大地图，但没有匹配到「大地图」。"
-                "不会点本城的「协会」或「探险」，也不会编造点击。"
+                f"要先从{current}退回大地图，但没有匹配到「大地图」三个字。"
+                "不会点本城的「协会」「探险」「农场」「商店」「酒馆」，也不会编造点击。"
             )
         else:
             click_message = (
                 f"当前在{current}，目标是{target}。"
                 "点击「大地图」回到所属大区地图。"
-                "不会点本城的「协会」或「探险」。"
+                "不会点本城的「协会」「探险」「农场」「商店」「酒馆」。"
             )
             missing = (
                 f"当前在{current}，目标是{target}，但没有匹配到「大地图」。"

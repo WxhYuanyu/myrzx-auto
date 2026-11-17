@@ -1451,9 +1451,35 @@
         0.9,
         1.05
       ],
-      "notes": "城内「大地图」木牌，只裁按钮上的字，不含上方地图钉和地形，避免把背景地图认进模板。两座城的位置不同，靠文字匹配，不写死坐标，也不作为场景标记。",
+      "notes": "王城和图兰顿城内「大地图」木牌上的字。北赛拉姆这类草地城对不上这块，改用 city_world_map_text。两张认到任一就点，不写死坐标，也不作为场景标记。",
       "width": 228,
       "height": 64
+    },
+    {
+      "id": "city_world_map_text",
+      "file": "city_world_map_text.png",
+      "source": "tests/fixtures/navigation/city_bei_seram.png",
+      "crop": [
+        555,
+        1390,
+        780,
+        1472
+      ],
+      "scene": null,
+      "role": "click_only",
+      "label": "大地图",
+      "click_target": true,
+      "threshold": 0.9,
+      "scales": [
+        1.0,
+        0.9,
+        0.95,
+        1.05,
+        1.1
+      ],
+      "notes": "各城共用的「大地图」三个字，带描边，尽量少带地面。从北赛拉姆实机图裁出。和 city_world_map 任一命中即可点，不把协会、探险、农场、商店、酒馆当成它。",
+      "width": 225,
+      "height": 82
     },
     {
       "id": "association_lilitos_header",

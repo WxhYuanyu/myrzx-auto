@@ -514,6 +514,35 @@ def test_world_map_button_is_the_plaque_and_matches_both_cities(turn_in, walkthr
     assert north is None
 
 
+CITY_BEI_SERAM = (
+    Path(__file__).resolve().parents[1] / "tests" / "fixtures" / "navigation" / "city_bei_seram.png"
+)
+
+
+def test_city_world_map_text_is_clicked_in_any_town(walkthrough, turn_in, templates):
+    """城里只要看见「大地图」三个字就点它。北赛拉姆、莉莉托斯、图兰顿同一条规则。"""
+    bei = load_bgr(CITY_BEI_SERAM)
+    result = DailyCommissionTask(specs=templates, recipe=get_recipe("受困的同伴")).plan(bei)
+    assert result.status == "continue"
+    assert result.action is not None
+    assert result.action.kind == "click"
+    assert result.action.label == "大地图"
+    assert result.action.label not in {"协会", "探险", "农场", "商店", "酒馆", "挑战任务"}
+    assert result.action.match is not None
+    assert result.action.match.template_id == "city_world_map_text"
+    assert (result.action.x, result.action.y) == result.action.match.box.center
+
+    for image in (walkthrough["wt_city"], turn_in["city_npc"]):
+        again = DailyCommissionTask(specs=templates, recipe=get_recipe("受困的同伴")).plan(image)
+        assert again.status == "continue"
+        assert again.action is not None
+        assert again.action.kind == "click"
+        assert again.action.label == "大地图"
+        assert again.action.label not in {"协会", "探险"}
+        assert again.action.match is not None
+        assert (again.action.x, again.action.y) == again.action.match.box.center
+
+
 def test_capital_crop_without_a_title_does_not_enter_the_association(screens, templates):
     task = DailyCommissionTask(specs=templates)
     result = task.plan(screens["city"])

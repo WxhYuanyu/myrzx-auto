@@ -5,6 +5,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
+from src import config
 from src.tasks.daily_commission import DailyCommissionTask
 from src.tasks.phase import Phase
 from pathlib import Path
@@ -12,6 +13,7 @@ from pathlib import Path
 from src.tasks.locations import AGLAEN, CRYSTIA, LANGREN, LITRILE, NAN_SERAM, SAINT_CASARE
 from src.tasks.navigation import (
     PORTAL_EXAMPLES,
+    _arm_pan,
     click_or_pan_to_place,
     kind_from_title,
     normalize_place_title,
@@ -277,7 +279,7 @@ def test_langren_visible_but_cut_off_banner_swipes_finger_right(walkthrough, tem
     assert result.action.label != "向左滑动地图"
     assert result.action.label != "向上滑动地图"
 
-    task.crystia_reveal_swipes = 4
+    task.crystia_reveal_swipes = config.MAP_SWIPE_MAX
     halted = task.plan(image)
     assert halted.status == "halt_missing"
     assert halted.action is not None
@@ -425,7 +427,7 @@ def test_crystia_returns_by_the_corner_tab_not_leave(turn_in, templates):
 
 
 def test_litrile_hidden_on_the_old_crystia_view_pans_instead_of_guessing(turn_in, templates):
-    """旧的克里斯汀截图上看不见利特利尔大区，就往西平移，不按坐标猜。"""
+    """旧的克里斯汀截图上看不见利特利尔大区，就按地标平移，不按坐标猜。"""
     task = DailyCommissionTask(specs=templates, recipe=get_recipe("受困的同伴"))
     result = task.plan(turn_in["region"])
     assert result.status == "continue"
@@ -460,7 +462,7 @@ def test_litrile_ocr_click_uses_the_visible_name(turn_in, templates):
     assert result.action.y == hit.box.center[1]
 
 
-def test_litrile_ocr_miss_pans_west_then_stops(turn_in, templates):
+def test_litrile_ocr_miss_pans_by_landmarks_then_stops(turn_in, templates):
     task = DailyCommissionTask(
         specs=templates,
         recipe=get_recipe("受困的同伴"),
@@ -469,12 +471,13 @@ def test_litrile_ocr_miss_pans_west_then_stops(turn_in, templates):
     result = task.plan(turn_in["region"])
     assert result.action is not None
     assert result.action.kind == "swipe"
-    assert result.action.label == "向右滑动地图"
-    assert result.action.x2 is not None and result.action.x is not None
-    assert result.action.x2 > result.action.x
-    assert "西" in (result.action.message or "")
+    assert result.action.label == "向下滑动地图"
+    assert result.action.y2 is not None and result.action.y is not None
+    assert result.action.y2 > result.action.y
+    assert result.action.label != "向右滑动地图"
     assert result.action.label != "图兰顿沙漠"
-    for _ in range(6):
+    assert result.action.label != "离开"
+    for _ in range(config.MAP_SWIPE_MAX):
         result = task.plan(turn_in["region"])
     assert result.status == "halt_missing"
     assert result.action is not None
@@ -606,6 +609,64 @@ def test_target_town_clicks_association_only_after_the_continent(templates):
     assert entered.action.kind == "click"
     assert entered.action.label == "协会"
     assert entered.action.label != "探险"
+
+
+MAP8F_HALT = (
+    Path(__file__).resolve().parents[1]
+    / "tests"
+    / "fixtures"
+    / "navigation"
+    / "nav-test-map8f-halt.png"
+)
+
+
+def test_landmarks_pan_north_toward_litrile_and_the_capital(walkthrough, templates):
+    """停在南边地标时往北拉。利特利尔和图兰顿、王城和浪人岬同一套，不写死方向。"""
+    south_crystia = load_bgr(MAP8F_HALT)
+    litrile = DailyCommissionTask(specs=templates, recipe=get_recipe("受困的同伴")).plan(
+        south_crystia
+    )
+    assert litrile.status == "continue"
+    assert litrile.action is not None
+    assert litrile.action.kind == "swipe"
+    assert litrile.action.label == "向下滑动地图"
+    assert litrile.action.y is not None and litrile.action.y2 is not None
+    assert litrile.action.y2 > litrile.action.y
+    assert litrile.action.label != "向右滑动地图"
+    assert litrile.action.label != "离开"
+    assert litrile.action.label != "返阿格莱恩"
+    assert "利特利尔大区" in (litrile.action.message or "")
+
+    capital = DailyCommissionTask(specs=templates).plan(walkthrough["wt_world_south"])
+    assert capital.status == "continue"
+    assert capital.action is not None
+    assert capital.action.kind == "swipe"
+    assert capital.action.label == "向下滑动地图"
+    assert capital.action.y2 is not None and capital.action.y is not None
+    assert capital.action.y2 > capital.action.y
+    assert capital.action.label != "离开"
+    assert "王城莉莉托斯" in (capital.action.message or "")
+
+    visible = DailyCommissionTask(specs=templates, recipe=get_recipe("受困的同伴")).plan(
+        load_bgr(FIXTURE_CRYSTIA_WEST)
+    )
+    assert visible.action is not None
+    assert visible.action.kind == "click"
+    assert visible.action.label == "利特利尔大区"
+    assert visible.action.match is not None
+    assert (visible.action.x, visible.action.y) == visible.action.match.box.center
+
+
+def test_changing_pan_direction_resets_the_swipe_count(templates):
+    task = DailyCommissionTask(specs=templates)
+    task.map_swipes = 7
+    _arm_pan(task, "litrile:west")
+    assert task.map_swipes == 0
+    task.map_swipes = 7
+    _arm_pan(task, "litrile:west")
+    assert task.map_swipes == 7
+    _arm_pan(task, "lilitos:north")
+    assert task.map_swipes == 0
 
 
 def test_capital_crop_without_a_title_does_not_enter_the_association(screens, templates):

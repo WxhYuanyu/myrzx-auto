@@ -13,8 +13,8 @@
   「前往克里斯汀」常常只在左边缘露出右半截，还要手指从左向右滑，
   把左边的内容拉进画面，整块旗帜对上再点。不点左下「离开」。
 - 人在克里斯汀、目标在阿格莱恩：点右下「返阿格莱恩」。左下「离开」只回当前城。
-- 同一张大区地图上地名可能在屏外（利特利尔大区在西侧）。平移到看见名称再点，
-  不按记录坐标猜。没有模板也读不出名字时停住。
+- 同一张大区地图上地名可能在屏外。用已经看见的地标和布局判断往哪边拉，
+  看见目标地名再点，不按记录坐标猜。没有模板也读不出名字时停住。
 """
 
 from __future__ import annotations
@@ -609,27 +609,38 @@ def find_place_label(task: Any, image: np.ndarray, place: MapPlace) -> Match | N
     return max(hits, key=lambda item: item.score)
 
 
+def _visible_landmarks(task: Any, image: np.ndarray, place: MapPlace) -> list[MapPlace]:
+    """当前大区上已经认出来、且不是目标本身的地名。"""
+    found: list[MapPlace] = []
+    for other in places_in(place.region):
+        if other.id == place.id or other.layout_east_south is None:
+            continue
+        if find_place_label(task, image, other) is not None:
+            found.append(other)
+    return found
+
+
 def pan_direction(task: Any, image: np.ndarray, place: MapPlace) -> str | None:
-    """地名不在画面上时，往哪边拉地图才能把它拉进来。"""
-    if place.id == "litrile":
-        return "west"
-    if place.region.id == "crystia":
-        if place.id in {"nar", "st_casare"}:
-            return "east"
+    """用地标到目标的布局向量决定往哪边拉。+x 东，+y 南。不是点击坐标。
+
+    |dx| 大于 |dy| 就东西向，否则南北向。两边大区同一套。
+    """
+    if place.layout_east_south is None:
         return None
-    if place.region.id != "aglaen":
+    landmarks = _visible_landmarks(task, image, place)
+    if not landmarks:
         return None
-    if place.id == "lilitos":
-        return "north"
-    if place.id in {"nan_seram", "langren"}:
-        return "south"
-    looking_south = any(
-        task._require(image, template_id) is not None
-        for template_id in ("world_nan_seram", "world_langren", "region_tab_crystia")
-    )
-    if place.id in {"lianhu", "bei_seram"}:
-        return "north" if looking_south else "south"
-    return "south"
+    count = float(len(landmarks))
+    cx = sum(item.layout_east_south[0] for item in landmarks) / count
+    cy = sum(item.layout_east_south[1] for item in landmarks) / count
+    tx, ty = place.layout_east_south
+    dx = tx - cx
+    dy = ty - cy
+    if abs(dx) <= 1e-6 and abs(dy) <= 1e-6:
+        return None
+    if abs(dx) > abs(dy):
+        return "east" if dx > 0 else "west"
+    return "south" if dy > 0 else "north"
 
 
 def _arm_pan(task: Any, key: str) -> None:
@@ -714,23 +725,18 @@ def click_or_pan_to_place(
             f"左上角是「{place.region.name}」。点击「{place.name}」进入。",
         )
 
-    if place.id == "lilitos":
-        _arm_pan(task, "lilitos:north")
-        return task._plan_world(image, clf)
-
     if not can_recognize_name(task, place):
-        where = "西侧、粉树一带" if place.id == "litrile" else "这张大区地图上"
         missing = (
-            f"「{place.name}」在「{place.region.name}」{where}。"
-            "缺少地名模板，当前也读不出这个名字，不会编造点击，也不会按固定坐标猜点。"
+            f"「{place.name}」在「{place.region.name}」上。"
+            "缺少地名模板，当前也读不出这个名字，不会编造点击，也不会按坐标猜点。"
         )
         return _halt(clf, place.region.scene, f"未找到{place.name}", missing)
 
     direction = pan_direction(task, image, place)
     if direction is None:
         missing = (
-            f"左上角已确认是「{place.region.name}」，但没有匹配到「{place.name}」。"
-            "不会按记录坐标猜点，也不会改点别的地名。"
+            f"「{place.region.name}」上还看不到「{place.name}」，"
+            "也没有能用来判断方向的地标。不会按坐标猜点，也不会点「离开」。"
         )
         return _halt(clf, place.region.scene, f"未找到{place.name}", missing)
 

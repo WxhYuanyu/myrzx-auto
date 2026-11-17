@@ -6,6 +6,8 @@
 - 看到左下「离开」就点它，不限于选关页（结晶矿洞这类页面也一样）。不点「扫荡」「兑换」「战阵」或矿层入口。
   已经在阿格莱恩或克里斯汀大地图上时，不用「离开」换区。
 - 城里点「大地图」，不点本城的「协会」或「探险」。
+- 已经进了目标城的协会室内（共用的「委托」、协会「离开」或标题里的「协会」）就停。
+  不再点「离开」出去，也不把这一步交给委托板去点「接收」。
 认不出退回按钮就停，不编造点击。
 
 看见大区地图之后再判断目标在哪一边：
@@ -547,9 +549,117 @@ def _wait_for_region(clf: Any) -> StepResult:
     )
 
 
+# 协会室内的共用标志。不是某一座城的整张室内底图，也不包括城门口的「协会」招牌。
+_ASSOCIATION_ROOM_SIGNS = (
+    "association_commission",
+    "association_commission_turandon",
+    "association_leave",
+    "association_lilitos_header",
+    "association_turandon_header",
+)
+
+
+def _template_hit(task: Any, image: np.ndarray, template_id: str) -> bool:
+    return template_id in task.by_id and task._require(image, template_id) is not None
+
+
+def _any_template(task: Any, image: np.ndarray, template_ids: tuple[str, ...]) -> bool:
+    return any(_template_hit(task, image, template_id) for template_id in template_ids)
+
+
+def _raw_title_text(task: Any, image: np.ndarray) -> str:
+    reader = getattr(task, "title_reader", None)
+    if reader is None:
+        ocr = getattr(task, "ocr", None)
+        reader = getattr(ocr, "read_title", None)
+    if not callable(reader):
+        return ""
+    got = reader(image)
+    if not got:
+        return ""
+    if isinstance(got, tuple):
+        return str(got[0] or "")
+    return str(got)
+
+
+def _city_in_association_title(title: str) -> str | None:
+    """标题写着某座城的协会，例如「莉莉托斯协会」。委托中心列表不算室内。"""
+    if "协会" not in title or "委托中心" in title:
+        return None
+    for place in PLACES:
+        if place.name in title:
+            return place.name
+        short = place.name.removeprefix("王城").removesuffix("大区")
+        if short and short != place.name and short in title:
+            return place.name
+    return None
+
+
+def _whose_association(task: Any, image: np.ndarray) -> str | None:
+    """专属标题能确定是哪座城的协会。认不出就返回 None，不靠整张室内底图。"""
+    best_name: str | None = None
+    best_score = 0.0
+    for place in PLACES:
+        header = place.association_header
+        if not header or not _template_hit(task, image, header):
+            continue
+        match = task._require(image, header)
+        if match is not None and match.score > best_score:
+            best_name = place.name
+            best_score = match.score
+    if best_name is not None:
+        return best_name
+    return _city_in_association_title(_raw_title_text(task, image))
+
+
+def _in_target_association_room(task: Any, image: np.ndarray) -> bool:
+    """回过大地图之后，已经站在目标城的协会室内。两边大区同一套。"""
+    place = _target(task)
+    if place is None or task.phase is not Phase.ACCEPT:
+        return False
+    if not getattr(task, "saw_continent", False):
+        return False
+    title = _raw_title_text(task, image)
+    in_room = _any_template(task, image, _ASSOCIATION_ROOM_SIGNS) or (
+        "协会" in title and "委托中心" not in title
+    )
+    if not in_room:
+        return False
+    whose = _whose_association(task, image)
+    if whose is not None:
+        return whose == place.name
+    pending = getattr(task, "pending_city", None)
+    if pending is not None and pending != place.name:
+        return False
+    # 标题或室内「委托」已经说明在协会里，又认不出是别的城，就当作到达。
+    # 只有左下「离开」时，必须是刚点进的这座城，避免把矿洞或选关页当成协会。
+    has_commission = _any_template(
+        task, image, ("association_commission", "association_commission_turandon")
+    )
+    has_title = "协会" in title and "委托中心" not in title
+    if has_commission or has_title:
+        return True
+    return _template_hit(task, image, "association_leave") and pending == place.name
+
+
+def _arrived_at_association(clf: Any, place_name: str) -> StepResult:
+    message = (
+        f"已经进入「{place_name}」的协会。导航到此结束，"
+        "不再点「离开」出协会，也不点委托板上的「接收」。"
+    )
+    return StepResult(
+        scene=Scene.ASSOCIATION,
+        reason=clf.reason,
+        matches=list(clf.matches),
+        action=PlannedAction(kind="halt", label="已到协会", message=message),
+        status="halt_missing",
+        message=message,
+    )
+
+
 def step(task: Any, image: np.ndarray, clf: Any) -> StepResult | None:
-    """导航一步。接取前，回过大地图并确认是目标城就点「协会」，不把这一步交给委托板。"""
-    if clf.scene in _QUEST_SCENES:
+    """导航一步。回过大地图并进入目标协会后停住，不把这一步交给委托板。"""
+    if clf.scene in _QUEST_SCENES and clf.scene is not Scene.ASSOCIATION:
         return None
     if task.phase is not Phase.ACCEPT and (
         clf.scene in _PREP_SCENES or clf.scene is Scene.STAGE_DESERT
@@ -560,6 +670,11 @@ def step(task: Any, image: np.ndarray, clf: Any) -> StepResult | None:
         task.saw_continent = True
         return task._plan_region_to_place(image, clf)
     saw = getattr(task, "saw_continent", False)
+    if task.phase is Phase.ACCEPT and saw and _in_target_association_room(task, image):
+        place = _target(task)
+        return _arrived_at_association(clf, place.name if place is not None else "目标城")
+    if clf.scene is Scene.ASSOCIATION:
+        return None
     if task.phase is Phase.ACCEPT and saw and city_is_target(task, image, clf):
         place = _target(task)
         return _click_city_association(

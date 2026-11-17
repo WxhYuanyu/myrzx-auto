@@ -27,9 +27,12 @@ def test_full_known_path_through_bubble(screens, templates):
 
     association = task.plan(screens["association"])
     assert association.scene is Scene.ASSOCIATION
-    assert association.status == "continue"
     assert association.action is not None
-    assert association.action.label == "委托"
+    assert association.action.kind == "halt"
+    assert association.action.label == "已到协会"
+    assert association.action.label != "离开"
+    assert association.action.label != "接收"
+    assert association.action.x is None
 
     listing = task.plan(screens["commission"])
     assert listing.scene is Scene.COMMISSION_LIST
@@ -162,7 +165,13 @@ def test_walkthrough_full_path(walkthrough, templates):
 
     assert by_name["wt_city"].action is not None
     assert by_name["wt_city"].action.label == "协会"
-    assert by_name["wt_association"].action.label == "委托"
+    arrived = by_name["wt_association"]
+    assert arrived.action is not None
+    assert arrived.action.kind == "halt"
+    assert arrived.action.label == "已到协会"
+    assert arrived.action.label != "离开"
+    assert arrived.action.label != "接收"
+    assert arrived.action.x is None
     assert by_name["wt_commission_list"].action.label == "喳喳布林入侵"
 
     accept = by_name["wt_quest_detail"]

@@ -657,6 +657,73 @@ def test_landmarks_pan_north_toward_litrile_and_the_capital(walkthrough, templat
     assert (visible.action.x, visible.action.y) == visible.action.match.box.center
 
 
+def test_target_association_room_stops_without_leaving(walkthrough, screens, templates):
+    """回过大地图后，目标城的协会室内是到达，不再点离开，也不去点接收。"""
+    capital = DailyCommissionTask(specs=templates)
+    capital.saw_continent = True
+    for image in (walkthrough["wt_association"], screens["association"]):
+        arrived = capital.plan(image)
+        assert arrived.action is not None
+        assert arrived.action.kind == "halt"
+        assert arrived.action.label == "已到协会"
+        assert arrived.action.label != "离开"
+        assert arrived.action.label != "接收"
+        assert arrived.action.x is None
+        assert "王城莉莉托斯" in (arrived.action.message or "")
+
+    desert = DailyCommissionTask(specs=templates, recipe=get_recipe("请让他们安息"))
+    desert.saw_continent = True
+    by_id = templates_by_id(templates)
+    room = np.zeros((900, 800, 3), dtype=np.uint8)
+    _paste(room, by_id["association_turandon_header"].image_bgr, 20, 40)
+    _paste(room, by_id["association_leave"].image_bgr, 16, 800)
+    desert_room = desert.plan(room)
+    assert desert_room.action is not None
+    assert desert_room.action.kind == "halt"
+    assert desert_room.action.label == "已到协会"
+    assert desert_room.action.label != "离开"
+    assert desert_room.action.label != "接收"
+    assert desert_room.action.x is None
+
+    wrong = DailyCommissionTask(specs=templates, recipe=get_recipe("受困的同伴"))
+    wrong.saw_continent = True
+    leaving = wrong.plan(walkthrough["wt_association"])
+    assert leaving.action is not None
+    assert leaving.action.kind == "click"
+    assert leaving.action.label == "离开"
+    assert leaving.action.match is not None
+    assert (leaving.action.x, leaving.action.y) == leaving.action.match.box.center
+
+    shared = np.zeros((800, 700, 3), dtype=np.uint8)
+    _paste(shared, by_id["association_leave"].image_bgr, 16, 620)
+    unnamed = DailyCommissionTask(specs=templates, recipe=get_recipe("受困的同伴"))
+    unnamed.saw_continent = True
+    unnamed.pending_city = "利特利尔大区"
+    stopped = unnamed.plan(shared)
+    assert stopped.action is not None
+    assert stopped.action.kind == "halt"
+    assert stopped.action.label == "已到协会"
+    assert stopped.action.label != "离开"
+    assert stopped.action.x is None
+
+    still_outside = DailyCommissionTask(specs=templates, recipe=get_recipe("受困的同伴"))
+    still_outside.saw_continent = True
+    city = still_outside.plan(load_bgr(CITY_LITRILE))
+    assert city.action is not None
+    assert city.action.kind == "click"
+    assert city.action.label == "协会"
+    assert city.action.match is not None
+    assert (city.action.x, city.action.y) == city.action.match.box.center
+
+    other = DailyCommissionTask(specs=templates, recipe=get_recipe("受困的同伴"))
+    other.saw_continent = True
+    opened = other.plan(load_bgr(CITY_BEI_SERAM))
+    assert opened.action is not None
+    assert opened.action.kind == "click"
+    assert opened.action.label == "大地图"
+    assert opened.action.label != "协会"
+
+
 def test_changing_pan_direction_resets_the_swipe_count(templates):
     task = DailyCommissionTask(specs=templates)
     task.map_swipes = 7

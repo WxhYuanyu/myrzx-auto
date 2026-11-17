@@ -118,6 +118,7 @@ class DailyCommissionTask(TaskBase):
         self.node_selected = False
         self.title_reader = None
         self.saw_continent = False
+        self.pending_city = None
         self._pan_key: str | None = None
         self._match_cache: dict[str, Match | None] = {}
 

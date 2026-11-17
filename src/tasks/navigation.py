@@ -185,8 +185,26 @@ def read_heading(task: Any, image: np.ndarray) -> Heading | None:
     return best
 
 
+def _town_name_from_titles(task: Any, image: np.ndarray) -> str | None:
+    """左上木牌上的地名。每座已有木牌裁切的城都走这里，不看整张城的背景。"""
+    best_name = None
+    best_score = 0.0
+    for place in PLACES:
+        template_id = place.city_title_template
+        if not template_id or template_id not in task.by_id:
+            continue
+        match = task._require(image, template_id)
+        if match is not None and match.score > best_score:
+            best_name = place.name
+            best_score = match.score
+    return best_name
+
+
 def confirmed_city_name(task: Any, image: np.ndarray, clf: Any) -> str | None:
     """当前城名。只认标题栏或已经由标题模板定下的城市场景，不认「协会」。"""
+    named = _town_name_from_titles(task, image)
+    if named:
+        return named
     heading = read_heading(task, image)
     if heading is not None and heading.kind == "city":
         return heading.title
@@ -197,11 +215,31 @@ def confirmed_city_name(task: Any, image: np.ndarray, clf: Any) -> str | None:
     return None
 
 
+CITY_WIDGETS = (
+    "city_association",
+    "city_turandon_association",
+    "city_world_map",
+    "city_world_map_text",
+    "city_explore",
+)
+
+
+def in_city(task: Any, image: np.ndarray) -> bool:
+    """协会、大地图或探险这类共用城镇控件出现，说明已经进了城，不是大地图过渡。"""
+    return verbs.best_of(task, image, CITY_WIDGETS) is not None
+
+
 def city_is_target(task: Any, image: np.ndarray, clf: Any) -> bool:
     place = getattr(task.recipe, "location", None)
     if place is None:
         return False
-    return confirmed_city_name(task, image, clf) == place.name
+    named = confirmed_city_name(task, image, clf)
+    if named and named != place.name:
+        return False
+    if named == place.name:
+        return True
+    # 刚在区域地图上点过这座城，下一张城内图就按它处理。标题若写成别的城则上面已经否掉。
+    return in_city(task, image) and getattr(task, "pending_city", None) == place.name
 
 
 def _halt(clf: Any, scene: Scene, label: str, message: str) -> StepResult:
@@ -442,6 +480,53 @@ def _quest_widget_visible(task: Any, image: np.ndarray) -> bool:
     return False
 
 
+def _click_city_association(task: Any, image: np.ndarray, clf: Any, place_name: str) -> StepResult:
+    match = verbs.best_of(task, image, ("city_association", "city_turandon_association"))
+    if match is None or match.label != "协会":
+        missing = (
+            f"已确认在「{place_name}」，但没有匹配到「协会」。"
+            "不会点商店、酒馆、探险、农场、挑战任务或对话气泡。"
+        )
+        return _halt(clf, clf.scene, "未找到协会", missing)
+    message = (
+        f"已进入「{place_name}」。点「协会」。"
+        "不点商店、酒馆、探险、农场、挑战任务或对话气泡。"
+    )
+    return task._click_result(clf.scene, clf, list(clf.matches), match, message)
+
+
+def _settle_unrecognized_exit(
+    task: Any, image: np.ndarray, clf: Any, exiting: StepResult
+) -> StepResult | None:
+    """退回按钮没对上时：已经在城里就按目标城处理，不要空等大地图。"""
+    unrecognized = (
+        exiting.status == "halt_missing"
+        and exiting.action is not None
+        and exiting.action.label == "认不出退回"
+    )
+    if unrecognized and in_city(task, image):
+        if city_is_target(task, image, clf):
+            place = _target(task)
+            return _click_city_association(
+                task, image, clf, place.name if place is not None else "目标城"
+            )
+        opened = task._plan_open_world_map(
+            image,
+            clf,
+            clf.scene,
+            here=confirmed_city_name(task, image, clf),
+            returning=True,
+        )
+        return opened
+    if unrecognized and getattr(task, "saw_continent", False):
+        if _quest_widget_visible(task, image):
+            return None
+        return _wait_for_region(clf)
+    if unrecognized and task.phase is not Phase.ACCEPT:
+        return None
+    return exiting
+
+
 def _wait_for_region(clf: Any) -> StepResult:
     """切换大区后的过渡帧。先等，不要交给委托板。"""
     message = (
@@ -471,22 +556,14 @@ def step(task: Any, image: np.ndarray, clf: Any) -> StepResult | None:
         task.saw_continent = True
         return task._plan_region_to_place(image, clf)
     if task.phase is Phase.ACCEPT and not getattr(task, "saw_continent", False):
-        return _return_until_continent(task, image, clf, heading)
+        return _settle_unrecognized_exit(
+            task, image, clf, _return_until_continent(task, image, clf, heading)
+        )
     if city_is_target(task, image, clf):
         return None
-    exiting = _return_until_continent(task, image, clf, heading)
-    unrecognized = (
-        exiting.status == "halt_missing"
-        and exiting.action is not None
-        and exiting.action.label == "认不出退回"
+    return _settle_unrecognized_exit(
+        task, image, clf, _return_until_continent(task, image, clf, heading)
     )
-    if unrecognized and getattr(task, "saw_continent", False):
-        if _quest_widget_visible(task, image):
-            return None
-        return _wait_for_region(clf)
-    if unrecognized and task.phase is not Phase.ACCEPT:
-        return None
-    return exiting
 
 
 def _usable_ocr(task: Any) -> bool:
@@ -617,6 +694,7 @@ def click_or_pan_to_place(
     if label is not None:
         task.map_swipes = 0
         task._pan_key = None
+        task.pending_city = place.name
         matches = _merge(matches, label)
         return task._click_result(
             place.region.scene,

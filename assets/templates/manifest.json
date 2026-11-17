@@ -1456,6 +1456,36 @@
       "height": 64
     },
     {
+      "id": "city_title_litrile",
+      "file": "city_title_litrile.png",
+      "source": "tests/fixtures/navigation/city_litrile.png",
+      "crop": [48, 224, 530, 286],
+      "scene": null,
+      "role": "click_only",
+      "label": "利特利尔大区",
+      "click_target": false,
+      "threshold": 0.9,
+      "scales": [1.0, 0.9, 1.1, 2.0, 2.2],
+      "notes": "城内左上木牌上的「利特利尔大区」，只裁地名，不含整张城。用来确认是不是目标城，不作为场景底图。",
+      "width": 482,
+      "height": 62
+    },
+    {
+      "id": "city_title_bei_seram",
+      "file": "city_title_bei_seram.png",
+      "source": "tests/fixtures/navigation/city_bei_seram.png",
+      "crop": [36, 226, 420, 292],
+      "scene": null,
+      "role": "click_only",
+      "label": "北赛拉姆",
+      "click_target": false,
+      "threshold": 0.9,
+      "scales": [1.0, 0.9, 1.1, 2.0, 2.2],
+      "notes": "城内左上木牌上的「北赛拉姆」，只裁地名。和其他城的木牌同一套确认办法。",
+      "width": 384,
+      "height": 66
+    },
+    {
       "id": "city_world_map_text",
       "file": "city_world_map_text.png",
       "source": "tests/fixtures/navigation/city_bei_seram.png",

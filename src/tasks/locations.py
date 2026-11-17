@@ -58,6 +58,8 @@ class MapPlace:
     region: Region
     map_label_template: str | None = None
     map_label_fallback: str | None = None
+    # 城内左上木牌上的地名。有了才用来确认是不是目标城，不拿来当整张城的底图。
+    city_title_template: str | None = None
     map_click: tuple[int, int] | None = None
     map_click_source: str | None = None
     map_click_box: tuple[int, int, int, int] | None = None
@@ -138,6 +140,7 @@ BEI_SERAM = MapPlace(
     name="北赛拉姆",
     region=AGLAEN,
     map_label_template="world_bei_seram",
+    city_title_template="city_title_bei_seram",
     map_click=(136, 1311),
     map_click_source="tests/fixtures/walkthrough/02_world_lilitos.png",
     map_click_box=(18, 1278, 237, 67),
@@ -220,6 +223,7 @@ LITRILE = MapPlace(
     name="利特利尔大区",
     region=CRYSTIA,
     map_label_template="world_litrile",
+    city_title_template="city_title_litrile",
     map_click=(480, 765),
     map_click_source="tests/fixtures/navigation/crystia_west_litrile.png",
     map_click_box=(330, 730, 300, 70),

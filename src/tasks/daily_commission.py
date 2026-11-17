@@ -211,7 +211,7 @@ class DailyCommissionTask(TaskBase):
     def _plan_region_to_place(
         self, image_bgr: np.ndarray, clf: Classification
     ) -> StepResult:
-        """在区域地图上走到配方记录的那座城。先认左上角横幅，再点记录的地名。"""
+        """在区域地图上走到配方记录的那座城。标题、页签或地名都能确认是哪一片。"""
         unmapped = self.recipe.unmapped_place
         if unmapped:
             missing = (
@@ -241,21 +241,12 @@ class DailyCommissionTask(TaskBase):
             )
 
         matches = list(clf.matches)
-        on_target = self._require(image_bgr, place.region.banner_template)
-        if on_target is not None:
-            matches = _merge_match(matches, on_target)
+        sight = navigation.recognize_region(self, image_bgr)
+        if sight is not None and sight.region.id == place.region.id:
+            matches = _merge_match(matches, sight.match)
             return self._plan_click_place(image_bgr, clf, matches, place)
 
-        other_name = None
-        for template_id, name in (("world_aglaen", "阿格莱恩"), ("world_crystia", "克里斯汀")):
-            if template_id == place.region.banner_template:
-                continue
-            banner = self._require(image_bgr, template_id)
-            if banner is not None:
-                matches = _merge_match(matches, banner)
-                other_name = name
-                break
-
+        other_name = sight.region.name if sight is not None else None
         tab_id = place.region.inbound_tab_template
         tab = self._require(image_bgr, tab_id) if tab_id else None
         if tab is not None:
@@ -268,9 +259,9 @@ class DailyCommissionTask(TaskBase):
             return self._click_result(clf.scene, clf, matches, tab, message)
 
         # 阿格莱恩上整块「前往克里斯汀」还没出现：先上滑到「浪人岬」，再手指从左向右把旗帜拉全。
-        if (
-            place.region.inbound_tab_template == "region_tab_crystia"
-            and other_name == "阿格莱恩"
+        on_aglaen = sight is not None and sight.region.id == "aglaen"
+        if place.region.inbound_tab_template == "region_tab_crystia" and (
+            on_aglaen or other_name == "阿格莱恩"
         ):
             return self._plan_swipe_toward_crystia_tab(image_bgr, clf, matches, place)
 

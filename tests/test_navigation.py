@@ -7,13 +7,18 @@ import pytest
 
 from src.tasks.daily_commission import DailyCommissionTask
 from src.tasks.phase import Phase
-from src.tasks.locations import LANGREN, LITRILE, NAN_SERAM, SAINT_CASARE
+from pathlib import Path
+
+from src.tasks.locations import AGLAEN, CRYSTIA, LANGREN, LITRILE, NAN_SERAM, SAINT_CASARE
 from src.tasks.navigation import (
     PORTAL_EXAMPLES,
     click_or_pan_to_place,
     kind_from_title,
     normalize_place_title,
+    recognize_region,
+    step as navigation_step,
 )
+from src.vision.image import load_bgr
 from src.tasks.recipes import get_recipe
 from src.vision.classify import classify_scene
 from src.vision.match import find_template
@@ -61,8 +66,8 @@ def test_title_kinds_follow_the_bar_not_a_portal():
     with pytest.raises(KeyError, match="尚未收录"):
         get_recipe("没有这条委托")
     assert SAINT_CASARE.name == "圣卡萨雷斯"
-    assert LITRILE.map_click is None
-    assert LITRILE.map_label_template is None
+    assert LITRILE.map_label_template == "world_litrile"
+    assert LITRILE.name == "利特利尔大区"
 
 
 def test_nested_area_clicks_return_and_not_a_portal(templates):
@@ -282,6 +287,128 @@ def test_langren_visible_but_cut_off_banner_swipes_finger_right(walkthrough, tem
     assert "离开" in halted.message
 
 
+FIXTURE_CRYSTIA_WEST = (
+    Path(__file__).resolve().parents[1]
+    / "tests"
+    / "fixtures"
+    / "navigation"
+    / "crystia_west_litrile.png"
+)
+
+
+def _mask(image, y0, y1, x0, x1):
+    painted = image.copy()
+    painted[y0:y1, x0:x1] = (24, 32, 24)
+    return painted
+
+
+def test_real_crystia_map_clicks_litrile_not_the_commission_board(templates):
+    image = load_bgr(FIXTURE_CRYSTIA_WEST)
+    classified = classify_scene(image, templates)
+    assert classified.scene is Scene.REGION_CRYSTIA
+    task = DailyCommissionTask(specs=templates, recipe=get_recipe("受困的同伴"))
+    result = task.plan(image)
+    assert result.status == "continue"
+    assert result.action is not None
+    assert result.action.kind == "click"
+    assert result.action.label == "利特利尔大区"
+    text = f"{result.message} {result.action.message}"
+    assert "委托板" not in text
+    assert "标题裁切" not in text
+    assert result.action.label != "离开"
+    assert result.action.label != "返阿格莱恩"
+
+
+def test_crystia_is_recognized_without_the_title_template(templates):
+    image = load_bgr(FIXTURE_CRYSTIA_WEST)
+    no_title = _mask(image, 180, 420, 0, 760)
+    task = DailyCommissionTask(specs=templates, recipe=get_recipe("受困的同伴"))
+    task._match_cache = {}
+    by_clue = recognize_region(task, no_title)
+    assert by_clue is not None and by_clue.region is CRYSTIA
+    assert by_clue.clue in {"tab", "place"}
+    clicked = task.plan(no_title)
+    assert clicked.action is not None
+    assert clicked.action.label == "利特利尔大区"
+    assert "标题裁切" not in (clicked.message or "")
+
+    by_id = templates_by_id(templates)
+    only_place = np.zeros((800, 700, 3), dtype=np.uint8)
+    _paste(only_place, by_id["region_turandon"].image_bgr, 40, 200)
+    task._match_cache = {}
+    sight = recognize_region(task, only_place)
+    assert sight is not None and sight.region is CRYSTIA
+    assert sight.clue == "place"
+    assert sight.match.label == "图兰顿沙漠"
+    walking = task.plan(only_place)
+    assert walking.action is not None
+    assert walking.status == "continue"
+    assert "利特利尔大区" in (walking.action.message or "")
+    assert "标题裁切" not in (walking.message or "")
+
+    only_tab = np.zeros((800, 700, 3), dtype=np.uint8)
+    _paste(only_tab, by_id["region_tab_aglaen"].image_bgr, 80, 500)
+    task._match_cache = {}
+    tab_sight = recognize_region(task, only_tab)
+    assert tab_sight is not None and tab_sight.region is CRYSTIA
+    assert tab_sight.clue == "tab"
+    assert tab_sight.match.label == "返阿格莱恩"
+
+
+def test_aglaen_is_recognized_without_the_title_template(walkthrough, templates):
+    by_id = templates_by_id(templates)
+    task = DailyCommissionTask(specs=templates, recipe=get_recipe("喳喳布林入侵"))
+    only_place = np.zeros((800, 700, 3), dtype=np.uint8)
+    _paste(only_place, by_id["world_langren"].image_bgr, 80, 200)
+    task._match_cache = {}
+    by_place = recognize_region(task, only_place)
+    assert by_place is not None and by_place.region is AGLAEN
+    assert by_place.clue == "place"
+    assert by_place.match.label == "浪人岬"
+    stayed = task.plan(only_place)
+    assert stayed.action is not None
+    assert stayed.action.label != "离开"
+    assert "标题裁切" not in (stayed.message or "")
+
+    only_tab = np.zeros((800, 700, 3), dtype=np.uint8)
+    _paste(only_tab, by_id["region_tab_crystia"].image_bgr, 20, 400)
+    task._match_cache = {}
+    by_tab = recognize_region(task, only_tab)
+    assert by_tab is not None and by_tab.region is AGLAEN
+    assert by_tab.clue == "tab"
+    assert by_tab.match.label == "前往克里斯汀"
+    south = walkthrough["wt_world_south"]
+    assert recognize_region(task, _mask(south, 200, 400, 0, 700)).region is AGLAEN
+
+
+def test_unknown_frame_after_a_continent_is_not_a_commission_board(templates):
+    task = DailyCommissionTask(specs=templates, recipe=get_recipe("受困的同伴"))
+    task.saw_continent = True
+    blank = np.zeros((400, 400, 3), dtype=np.uint8)
+    clf = classify_scene(blank, templates)
+    nav = navigation_step(task, blank, clf)
+    assert nav is not None
+    assert nav.action is not None
+    assert nav.action.kind == "wait"
+    assert nav.status == "skip_unknown"
+    planned = task.plan(blank)
+    assert planned.action is not None
+    text = f"{planned.message} {planned.action.message}"
+    assert "标题裁切" not in text
+    assert planned.action.kind == "wait"
+
+
+def test_navigation_step_returns_none_only_inside_the_target_city(walkthrough, templates):
+    task = DailyCommissionTask(specs=templates, recipe=get_recipe("喳喳布林入侵"))
+    city = walkthrough["wt_city"]
+    before = classify_scene(city, templates)
+    assert navigation_step(task, city, before) is not None
+    task.saw_continent = True
+    assert navigation_step(task, city, before) is None
+    world = classify_scene(walkthrough["wt_world_lilitos"], templates)
+    assert navigation_step(task, walkthrough["wt_world_lilitos"], world) is not None
+
+
 def test_crystia_returns_by_the_corner_tab_not_leave(turn_in, templates):
     task = DailyCommissionTask(specs=templates, recipe=get_recipe("喳喳布林入侵"))
     result = task.plan(turn_in["region"])
@@ -292,16 +419,15 @@ def test_crystia_returns_by_the_corner_tab_not_leave(turn_in, templates):
     assert result.action.x is not None and result.action.x > 700
 
 
-def test_litrile_without_a_template_halts_on_crystia(turn_in, templates):
+def test_litrile_hidden_on_the_old_crystia_view_pans_instead_of_guessing(turn_in, templates):
+    """旧的克里斯汀截图上看不见利特利尔大区，就往西平移，不按坐标猜。"""
     task = DailyCommissionTask(specs=templates, recipe=get_recipe("受困的同伴"))
     result = task.plan(turn_in["region"])
-    assert result.status == "halt_missing"
+    assert result.status == "continue"
     assert result.action is not None
-    assert result.action.kind == "halt"
-    assert result.action.x is None
-    assert "利特利尔大区" in result.message
-    assert "坐标" in result.message
-    assert "不会" in result.message
+    assert result.action.kind == "swipe"
+    assert "利特利尔大区" in (result.action.message or "")
+    assert "坐标" in (result.action.message or "")
     assert result.action.label != "图兰顿沙漠"
     assert result.action.label != "离开"
 

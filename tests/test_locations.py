@@ -11,6 +11,7 @@ from src.tasks.locations import (
     LANGREN,
     LIANHU,
     LILITOS,
+    LITRILE,
     NAN_SERAM,
     NAR,
     PLACES,
@@ -91,6 +92,7 @@ def test_recorded_clicks_match_templates(templates):
         TURANDON,
         NAR,
         SAINT_CASARE,
+        LITRILE,
     ):
         _assert_recorded_click(templates, place)
 

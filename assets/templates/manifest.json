@@ -879,24 +879,28 @@
     {
       "id": "world_crystia",
       "file": "world_crystia.png",
-      "source": "01_region_crystia.png",
+      "source": "tests/fixtures/navigation/crystia_west_litrile.png",
       "crop": [
-        18,
-        252,
-        750,
-        398
+        148,
+        248,
+        528,
+        343
       ],
       "scene": "REGION_CRYSTIA",
       "role": "scene_marker",
       "label": "克里斯汀",
       "click_target": false,
-      "threshold": 0.9,
       "scales": [
-        1.0
+        1.0,
+        0.9,
+        1.1,
+        2.0,
+        2.2,
+        2.25
       ],
-      "notes": "克里斯汀区域地图左上地名横幅，含英文 The United Realms of Crystia。用来确认当前位置，再点「图兰顿沙漠」。不作点击。",
-      "width": 732,
-      "height": 146
+      "notes": "克里斯汀大地图左上紧裁标题：徽记加「克里斯汀」，不含英文副标题和背景。和阿格莱恩标题一样走多尺度。旧的 732×146 整条横幅只在 scale 1.0、阈值 0.9 时才能对上，实机略有偏差就失败。不作点击。",
+      "width": 380,
+      "height": 95
     },
     {
       "id": "region_turandon",
@@ -1494,6 +1498,32 @@
       "notes": "克里斯汀地图右下「返阿格莱恩」页签。从克里斯汀回到阿格莱恩时点这里，不点左下「离开」。记录中心约 (887, 1815)。",
       "width": 375,
       "height": 106
+    },
+    {
+      "id": "world_litrile",
+      "file": "world_litrile.png",
+      "source": "tests/fixtures/navigation/crystia_west_litrile.png",
+      "crop": [
+        330,
+        730,
+        630,
+        800
+      ],
+      "scene": "REGION_CRYSTIA",
+      "role": "click_only",
+      "label": "利特利尔大区",
+      "click_target": true,
+      "threshold": 0.9,
+      "scales": [
+        1.0,
+        0.9,
+        1.1,
+        2.0,
+        2.2
+      ],
+      "notes": "克里斯汀地图上的金色「利特利尔大区」飘带，只裁整块旗帜。看见名字再点，不记录成可以盲点的坐标。属克里斯汀西侧。",
+      "width": 300,
+      "height": 70
     },
     {
       "id": "world_lianhu",

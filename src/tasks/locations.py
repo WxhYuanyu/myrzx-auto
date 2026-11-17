@@ -219,9 +219,13 @@ LITRILE = MapPlace(
     id="litrile",
     name="利特利尔大区",
     region=CRYSTIA,
+    map_label_template="world_litrile",
+    map_click=(480, 765),
+    map_click_source="tests/fixtures/navigation/crystia_west_litrile.png",
+    map_click_box=(330, 730, 300, 70),
     notes=(
-        "克里斯汀西侧、粉树一带。还没有实走截图，因此没有地名模板，也不记录坐标。"
-        "在克里斯汀地图上要往西平移，看见「利特利尔大区」再点；读不出名字就停。"
+        "克里斯汀西侧、粉树一带。实拍在 tests/fixtures/navigation/crystia_west_litrile.png。"
+        "看见「利特利尔大区」飘带再点。这张图上的记录中心是 (480, 765)，地图滑开后不能拿它盲点。"
     ),
 )
 
@@ -244,9 +248,6 @@ PLACES: tuple[MapPlace, ...] = (
 
 PLACES_BY_ID: dict[str, MapPlace] = {place.id: place for place in PLACES}
 PLACES_BY_NAME: dict[str, MapPlace] = {place.name: place for place in PLACES}
-
-# 利特利尔大区属于克里斯汀，但没有实走截图。不要补坐标或假模板。
-
 
 def places_in(region: Region) -> tuple[MapPlace, ...]:
     """某一片区域地图上已经记录的地点，按图谱顺序。"""

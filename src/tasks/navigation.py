@@ -27,7 +27,7 @@ import numpy as np
 
 from src import config
 from src.tasks.base import PlannedAction, StepResult
-from src.tasks.locations import PLACES, MapPlace
+from src.tasks.locations import PLACES, REGIONS, MapPlace, Region, places_in
 from src.tasks.phase import Phase
 from src.tasks import verbs
 from src.vision.ocr import NullOcrProvider
@@ -275,6 +275,55 @@ def _city_name(heading: Heading | None, clf: Any) -> str | None:
     return None
 
 
+@dataclass(frozen=True)
+class RegionSight:
+    """当前画面属于哪一片大区，以及是哪条线索认出来的。"""
+
+    region: Region
+    match: Match
+    clue: str  # banner / place / tab
+
+
+def _map_showing_inbound_tab(destination: Region) -> Region | None:
+    """进入 destination 的页签画在另一片大区上。两片时就是剩下的那片。"""
+    others = [region for region in REGIONS.values() if region.id != destination.id]
+    if len(others) == 1:
+        return others[0]
+    return None
+
+
+def recognize_region(task: Any, image: np.ndarray) -> RegionSight | None:
+    """认当前大区。标题、对面的区域页签、本区地名标签，任何一条稳定线索都算。
+
+    看到「返阿格莱恩」说明人在克里斯汀；看到「前往克里斯汀」说明人在阿格莱恩。
+    以后再加新区，仍走标题、页签和 places_in 里的地名，不另写一套。
+    """
+    sights: list[RegionSight] = []
+    for region in REGIONS.values():
+        if region.banner_template in task.by_id:
+            banner = task._require(image, region.banner_template)
+            if banner is not None:
+                sights.append(RegionSight(region, banner, "banner"))
+        for place in places_in(region):
+            label = find_place_label(task, image, place)
+            if label is not None:
+                sights.append(RegionSight(region, label, "place"))
+        if not region.inbound_tab_template or region.inbound_tab_template not in task.by_id:
+            continue
+        tab = task._require(image, region.inbound_tab_template)
+        host = _map_showing_inbound_tab(region)
+        if tab is not None and host is not None:
+            sights.append(RegionSight(host, tab, "tab"))
+    if not sights:
+        return None
+    best: dict[str, RegionSight] = {}
+    for sight in sights:
+        current = best.get(sight.region.id)
+        if current is None or sight.match.score > current.match.score:
+            best[sight.region.id] = sight
+    return max(best.values(), key=lambda sight: sight.match.score)
+
+
 def _on_continent(heading: Heading | None, clf: Any) -> bool:
     if clf.scene in {Scene.WORLD_MAP, Scene.REGION_CRYSTIA}:
         return True
@@ -368,51 +417,68 @@ def _return_until_continent(
     return _halt_unrecognized_exit(clf)
 
 
+def _quest_widget_visible(task: Any, image: np.ndarray) -> bool:
+    """画面上已经有委托卡片、NPC 或详情，交给委托流程，不当成大地图过渡。"""
+    recipe = task.recipe
+    candidates = (
+        getattr(recipe, "card_template", None),
+        getattr(recipe, "log_template", None),
+        getattr(recipe, "npc_template", None),
+        "association_commission",
+        "association_commission_turandon",
+        "quest_detail_title",
+    )
+    for template_id in candidates:
+        if template_id and template_id in task.by_id and task._require(image, template_id):
+            return True
+    return False
+
+
+def _wait_for_region(clf: Any) -> StepResult:
+    """切换大区后的过渡帧。先等，不要交给委托板。"""
+    message = (
+        "这一帧还认不出是「阿格莱恩」还是「克里斯汀」，也还没进入目标城。"
+        "先等下一帧继续导航，不会按委托卡片停下，也不会编造点击。"
+    )
+    return StepResult(
+        scene=clf.scene,
+        reason=clf.reason,
+        matches=list(clf.matches),
+        action=PlannedAction(kind="wait", label="等待大地图", message=message),
+        status="skip_unknown",
+        message=message,
+    )
+
+
 def step(task: Any, image: np.ndarray, clf: Any) -> StepResult | None:
-    """导航一步。返回 None 表示可以在当前城里做委托，不必再退。"""
+    """导航一步。只有已经确认在目标城里，才返回 None 交给委托流程。"""
     if clf.scene in _QUEST_SCENES:
         return None
+    if task.phase is not Phase.ACCEPT and (
+        clf.scene in _PREP_SCENES or clf.scene is Scene.STAGE_DESERT
+    ):
+        return None
     heading = read_heading(task, image)
-    if _on_continent(heading, clf):
+    if recognize_region(task, image) is not None or _on_continent(heading, clf):
         task.saw_continent = True
         return task._plan_region_to_place(image, clf)
-    if _needs_map(task):
+    if task.phase is Phase.ACCEPT and not getattr(task, "saw_continent", False):
         return _return_until_continent(task, image, clf, heading)
-
-    city = _city_name(heading, clf)
-    target = _target(task)
-    if city and target and city != target.name:
-        return task._plan_open_world_map(image, clf, clf.scene, here=city)
-    if city and target and city == target.name:
+    if city_is_target(task, image, clf):
         return None
-
-    in_quest_stage = clf.scene in _PREP_SCENES or clf.scene is Scene.STAGE_DESERT
-    if task.phase is Phase.ACCEPT:
-        if heading is not None and heading.kind == "portal":
-            missing = (
-                f"读到「{heading.title}」，这是传送门而不是地点标题。"
-                + _portal_sentence()
-                + "嵌套区域要离开时只点「回程」。"
-            )
-            return _halt(clf, clf.scene, "拒绝传送门", missing)
-        if heading is not None and heading.kind in {"region_stage", "nested"}:
-            return click_return(task, image, clf, heading)
-        if clf.scene is Scene.STAGE_DESERT:
-            return click_return(
-                task,
-                image,
-                clf,
-                Heading("图兰顿沙漠地区", "", "region_stage"),
-            )
-        if _is_stage_prep(heading, clf):
-            return _leave_stage(task, image, clf)
-        unlisted = click_unlisted_return(task, image, clf)
-        if unlisted is not None:
-            return unlisted
+    exiting = _return_until_continent(task, image, clf, heading)
+    unrecognized = (
+        exiting.status == "halt_missing"
+        and exiting.action is not None
+        and exiting.action.label == "认不出退回"
+    )
+    if unrecognized and getattr(task, "saw_continent", False):
+        if _quest_widget_visible(task, image):
+            return None
+        return _wait_for_region(clf)
+    if unrecognized and task.phase is not Phase.ACCEPT:
         return None
-    if in_quest_stage:
-        return None
-    return click_unlisted_return(task, image, clf)
+    return exiting
 
 
 def _usable_ocr(task: Any) -> bool:

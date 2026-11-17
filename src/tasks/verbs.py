@@ -128,18 +128,44 @@ def close_with_back(
     message: str,
     matches: list[Match] | None = None,
 ) -> StepResult | None:
-    """点卡片右上的返回箭头，并等关窗动画。不要点屏幕底部的「离开」。"""
+    """点右上的返回箭头，并等关窗动画。不要点屏幕底部的「离开」。"""
     back = task._require(image, "quest_detail_back")
-    if back is None:
-        return None
     base = list(clf.matches if matches is None else matches)
-    return task._click_result(
-        scene,
-        clf,
-        _with(base, back),
-        back,
-        message,
+    if back is not None:
+        return task._click_result(
+            scene,
+            clf,
+            _with(base, back),
+            back,
+            message,
+            delay_sec=config.CLOSE_ANIMATION_SEC,
+        )
+    # 箭头周围是协会场景，灯光一变大图就对不上。标题栏右侧仍是返回。
+    title = None
+    for template_id in ("commission_adventurer_title", "commission_center_title"):
+        title = task._require(image, template_id)
+        if title is not None:
+            break
+    if title is None:
+        return None
+    height, width = image.shape[:2]
+    x = min(width - 50, title.box.x + title.box.w + 40)
+    y = title.box.y + title.box.h // 2
+    action = PlannedAction(
+        kind="click",
+        label="返回",
+        x=int(x),
+        y=int(y),
+        message=message,
         delay_sec=config.CLOSE_ANIMATION_SEC,
+    )
+    return StepResult(
+        scene=scene,
+        reason=clf.reason,
+        matches=_with(base, title),
+        action=action,
+        status="continue",
+        message=action.brief(),
     )
 
 

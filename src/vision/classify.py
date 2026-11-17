@@ -74,6 +74,7 @@ def classify_scene(
         "city_turandon_title",
         "association_commission",
         "association_turandon_header",
+        "association_lilitos_header",
         "commission_center_title",
         "commission_adventurer_title",
         "quest_detail_title",

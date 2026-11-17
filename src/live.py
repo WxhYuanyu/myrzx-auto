@@ -74,7 +74,7 @@ def run_live(
         logger.info("%s", line)
 
         if result.status == "done":
-            message = "委托已完成。"
+            message = result.message or "委托已完成。"
             emit(message)
             return LiveRunResult("done", message, steps, result, history)
 

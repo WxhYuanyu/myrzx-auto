@@ -8,7 +8,6 @@ from src.vision.types import Scene
 
 EXPECTED = {
     "world": Scene.WORLD_MAP,
-    "city": Scene.CITY_LILITOS,
     "association": Scene.ASSOCIATION,
     "commission": Scene.COMMISSION_LIST,
     "quest_detail": Scene.QUEST_DETAIL,
@@ -106,11 +105,14 @@ def test_victory_beats_battle_hud(walkthrough, templates):
     assert result.scene is Scene.VICTORY
 
 
-def test_full_city_and_cropped_city_are_same_scene(screens, templates):
+def test_capital_comes_from_the_subtitle_not_the_association(screens, templates):
+    """没有标题栏的裁切只剩共用的「协会」，不能判成王城莉莉托斯。"""
     cropped = classify_scene(screens["city"], templates)
     full = classify_scene(screens["city_explore"], templates)
-    assert cropped.scene is Scene.CITY_LILITOS
+    assert cropped.scene is not Scene.CITY_LILITOS
     assert full.scene is Scene.CITY_LILITOS
+    assert full.best is not None
+    assert full.best.label == "阿格莱恩独立王国首都"
 
 
 def test_bubble_crop_is_stage_1_3(screens, templates):

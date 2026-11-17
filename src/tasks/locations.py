@@ -4,8 +4,8 @@
 在哪张 1080×1920 实走截图上、要点哪里。配方只引用这里的地点，后续给其他地区
 的委托规划路线时，先补这条记录，再补城内协会和委托板。
 
-地图滑动后标签会跟着移动，所以规划时先做模板匹配；记录坐标只作为已经确认
-在对应区域地图、且模板没打上时的备选。
+地图滑动后标签会跟着移动。规划时先认地名；看不见就平移，直到名称进入画面再点。
+记录坐标只说明某张实走截图上标签曾经在哪，不能在标签不在画面上时拿来猜点。
 """
 
 from __future__ import annotations
@@ -202,13 +202,26 @@ NAR = MapPlace(
 
 SAINT_CASARE = MapPlace(
     id="st_casare",
-    name="圣卡萨雷",
+    name="圣卡萨雷斯",
     region=CRYSTIA,
     map_label_template="region_st_casare",
     map_click=(970, 1225),
     map_click_source="tests/fixtures/turn_in/01_region_crystia.png",
     map_click_box=(860, 1188, 220, 74),
-    notes="克里斯汀地图右侧的地点，截图右侧略裁切。城内路线尚未走查。",
+    notes=(
+        "克里斯汀地图右侧的地点。正确全称是「圣卡萨雷斯」。"
+        "现有截图右侧略裁切，飘带上只露出「圣卡萨雷」。城内路线尚未走查。"
+    ),
+)
+
+LITRILE = MapPlace(
+    id="litrile",
+    name="利特利尔大区",
+    region=CRYSTIA,
+    notes=(
+        "克里斯汀西侧、粉树一带。还没有实走截图，因此没有地名模板，也不记录坐标。"
+        "在克里斯汀地图上要往西平移，看见「利特利尔大区」再点；读不出名字就停。"
+    ),
 )
 
 REGIONS: dict[str, Region] = {
@@ -225,13 +238,13 @@ PLACES: tuple[MapPlace, ...] = (
     TURANDON,
     NAR,
     SAINT_CASARE,
+    LITRILE,
 )
 
 PLACES_BY_ID: dict[str, MapPlace] = {place.id: place for place in PLACES}
 PLACES_BY_NAME: dict[str, MapPlace] = {place.name: place for place in PLACES}
 
-# 利特利尔大区还不在这张表里。「受困的同伴」因此停住。
-# 不要补一个没有实走截图的坐标或城市点击。
+# 利特利尔大区属于克里斯汀，但没有实走截图。不要补坐标或假模板。
 
 
 def places_in(region: Region) -> tuple[MapPlace, ...]:

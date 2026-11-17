@@ -49,7 +49,7 @@ def test_every_visible_place_is_recorded():
     aglaen = {place.name for place in places_in(AGLAEN)}
     assert aglaen == {"王城莉莉托斯", "莉安湖", "北赛拉姆", "南赛拉姆", "浪人岬"}
     crystia = {place.name for place in places_in(CRYSTIA)}
-    assert crystia == {"图兰顿沙漠", "纳尔本", "圣卡萨雷"}
+    assert crystia == {"图兰顿沙漠", "纳尔本", "圣卡萨雷斯", "利特利尔大区"}
     assert {place.name for place in PLACES} == aglaen | crystia
     assert LILITOS.has_city_route
     assert TURANDON.has_city_route
@@ -67,6 +67,8 @@ def test_scale_point_keeps_1080x1920():
 
 def _assert_recorded_click(templates, place, *, max_delta: int = 25):
     assert place.map_label_template
+    if place.map_click is None:
+        return
     assert place.map_click is not None
     assert place.map_click_source
     image = load_bgr(ROOT / place.map_click_source)

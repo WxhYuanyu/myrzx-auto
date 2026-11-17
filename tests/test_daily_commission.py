@@ -19,7 +19,7 @@ def test_full_known_path_through_bubble(screens, templates):
     assert world.action.kind == "click"
     assert world.action.label == "王城莉莉托斯"
 
-    city = task.plan(screens["city"])
+    city = task.plan(screens["city_explore"])
     assert city.scene is Scene.CITY_LILITOS
     assert city.status == "continue"
     assert city.action is not None

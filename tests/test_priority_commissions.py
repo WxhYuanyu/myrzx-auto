@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 
 from src.tasks.daily_commission import DailyCommissionTask, Phase
-from src.tasks.locations import BEI_SERAM, LIANHU, NAR, TURANDON
+from src.tasks.locations import BEI_SERAM, LIANHU, LITRILE, NAR, TURANDON
 from src.tasks.recipes import RECIPES_BY_NAME, get_recipe
 from src.vision.classify import Classification
 from src.vision.image import load_bgr
@@ -56,8 +56,9 @@ def test_place_names_use_the_atlas_spelling():
     assert road.location.name == "纳尔本"
     assert get_recipe("请让他们安息").location is TURANDON
     trapped = get_recipe("受困的同伴")
-    assert trapped.location is None
-    assert trapped.unmapped_place == "利特利尔大区"
+    assert trapped.location is LITRILE
+    assert trapped.location.name == "利特利尔大区"
+    assert trapped.unmapped_place is None
 
 
 def test_poison_and_man_eater_share_the_reenter_flow_but_not_the_stage():
@@ -124,16 +125,19 @@ def test_let_them_rest_reuses_the_crystia_opening(walkthrough, turn_in, template
     assert region.action.label == "图兰顿沙漠"
 
 
-def test_litrile_halts_without_a_made_up_click(walkthrough, templates):
+def test_litrile_from_aglaen_scrolls_south_instead_of_guessing(walkthrough, templates):
+    """利特利尔在克里斯汀。阿格莱恩最上侧看不到「前往克里斯汀」，先往南拉，不点王城。"""
     task = _task(templates, "受困的同伴")
     result = task.plan(walkthrough["wt_world_lilitos"])
-    assert result.status == "halt_missing"
     assert result.action is not None
-    assert result.action.kind == "halt"
-    assert result.action.x is None
-    assert "利特利尔大区" in result.message
-    assert "编造" in result.message
+    assert result.action.kind == "swipe"
+    assert result.action.label == "向上滑动地图"
+    assert result.action.x is not None and result.action.y2 is not None
+    assert result.action.y2 < result.action.y
+    assert "前往克里斯汀" in (result.action.message or "")
+    assert "不要假设" in (result.action.message or "")
     assert result.action.label != "王城莉莉托斯"
+    assert result.action.label != "离开"
 
 
 def test_reenter_association_clicks_the_door_not_explore(walkthrough, templates):
@@ -146,7 +150,8 @@ def test_reenter_association_clicks_the_door_not_explore(walkthrough, templates)
     back = task.plan(walkthrough["wt_city"])
     assert back.action is not None
     assert back.action.kind == "click"
-    assert back.action.label == "协会"
+    assert back.action.label == "大地图"
+    assert back.action.label != "协会"
     assert back.action.label != "探险"
 
 

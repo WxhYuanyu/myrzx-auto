@@ -43,10 +43,9 @@ import numpy as np
 from src import config
 from src.tasks.base import PlannedAction, StepResult, TaskBase
 from src.tasks.phase import Phase
-from src.tasks.locations import scale_point
 from src.tasks.priority_flows import plan_priority
 from src.tasks.recipes import CommissionKind, CommissionRecipe, ZHAZHA_BULIN
-from src.tasks import verbs
+from src.tasks import navigation, verbs
 from src.vision.bubble import find_explore_nodes, select_node_by_bubble
 from src.vision.classify import Classification, classify_scene
 from src.vision.match import find_template
@@ -116,6 +115,8 @@ class DailyCommissionTask(TaskBase):
         self.step_index = 0
         self.step_armed = False
         self.node_selected = False
+        self.title_reader = None
+        self._pan_key: str | None = None
         self._match_cache: dict[str, Match | None] = {}
 
     def plan(self, image_bgr: np.ndarray) -> StepResult:
@@ -129,30 +130,9 @@ class DailyCommissionTask(TaskBase):
         multi = kind is CommissionKind.MULTI_BATTLE
         if scene is not Scene.VICTORY:
             self.victory_counted = False
-        if self.phase is Phase.ACCEPT and scene in {
-            Scene.STAGE_1_3,
-            Scene.STAGE_9_7,
-            Scene.STAGE_MAP,
-        }:
-            return verbs.leave_stage_select(
-                self,
-                image_bgr,
-                classification,
-                scene,
-                "接取前先离开选关页，回到城内再经大地图前往目标城市。不会点「扫荡」。",
-            )
-        if self.phase is Phase.ACCEPT and scene is Scene.STAGE_DESERT:
-            return self._click_or_missing(
-                image_bgr,
-                classification,
-                scene,
-                "stage_return",
-                click_message="接取前先点「回程」回城，再经大地图前往目标城市。",
-                missing_label="未找到回程",
-                missing_message="接取前停在图兰顿沙漠地区，但没有匹配到「回程」。不会改点关卡。",
-            )
-        if scene in {Scene.WORLD_MAP, Scene.REGION_CRYSTIA}:
-            return self._plan_region_to_place(image_bgr, classification)
+        nav = navigation.step(self, image_bgr, classification)
+        if nav is not None:
+            return nav
         if self.recipe.flow:
             return plan_priority(self, image_bgr, classification)
         if scene in {Scene.CITY_LILITOS, Scene.CITY_TURANDON}:
@@ -326,11 +306,12 @@ class DailyCommissionTask(TaskBase):
                 x2=x2,
                 y2=y2,
                 message=(
-                    "当前是阿格莱恩地图，还看不到南边的「前往克里斯汀」页签。"
-                    "手指上拖以露出海边的页签，再前往"
+                    "当前是阿格莱恩大地图。停在地图最上侧时，屏幕上不会出现「前往克里斯汀」，"
+                    "不要假设页签已经在画面上。手指上拖，把视野往南边海边拉，"
+                    "直到看到「前往克里斯汀」再点，然后前往"
                     f"「{place.region.name}」的「{place.name}」。"
                     f"第 {self.map_swipes}/{config.MAP_SWIPE_MAX} 次滑动。"
-                    "不要点「离开」，也不要进王城莉莉托斯。"
+                    "不要点左下「离开」，也不要进王城莉莉托斯。"
                 ),
             )
             return StepResult(
@@ -361,63 +342,20 @@ class DailyCommissionTask(TaskBase):
         matches: list[Match],
         place,
     ) -> StepResult:
-        ids: list[str] = []
-        if place.map_label_template:
-            ids.append(place.map_label_template)
-        if place.map_label_fallback:
-            ids.append(place.map_label_fallback)
-        label = self._require_best(image_bgr, *ids) if ids else None
-        if label is not None:
-            matches = _merge_match(matches, label)
-            return self._click_result(
-                place.region.scene,
-                clf,
-                matches,
-                label,
-                f"左上角是「{place.region.name}」。点击「{place.name}」进入。",
-            )
-        # 王城莉莉托斯在南边视野里看不见。这时应下滑露出它，不能点另一张图上的记录坐标。
-        if place.map_label_template in {"world_lilitos_full", "world_lilitos"}:
-            return self._plan_world(image_bgr, clf)
-        if place.map_click is not None:
-            x, y = scale_point(image_bgr, place.map_click[0], place.map_click[1])
-            source = place.map_click_source or "位置图谱"
-            action = PlannedAction(
-                kind="click",
-                label=place.name,
-                x=x,
-                y=y,
-                message=(
-                    f"左上角已确认是「{place.region.name}」，模板未命中「{place.name}」，"
-                    f"改用记录的地图位置 {place.map_click}（来自 {source}）。"
-                ),
-            )
-            return StepResult(
-                scene=place.region.scene,
-                reason=clf.reason,
-                matches=matches,
-                action=action,
-                status="continue",
-                message=action.message,
-            )
-        missing = (
-            f"左上角已确认是「{place.region.name}」，但没有匹配到「{place.name}」，"
-            "也没有记录可用的点击位置。不会改点别的地名。"
-        )
-        return StepResult(
-            scene=place.region.scene,
-            reason=clf.reason,
-            matches=matches,
-            action=PlannedAction(kind="halt", label=f"未找到{place.name}", message=missing),
-            status="halt_missing",
-            message=missing,
-        )
+        del matches
+        return navigation.click_or_pan_to_place(self, image_bgr, clf, place)
 
     def _plan_open_world_map(
-        self, image_bgr: np.ndarray, clf: Classification, scene: Scene
+        self,
+        image_bgr: np.ndarray,
+        clf: Classification,
+        scene: Scene,
+        *,
+        here: str | None = None,
     ) -> StepResult:
         place = self._place()
         target = f"「{place.name}」" if place else "目标城市"
+        current = f"「{here}」" if here else "另一座城"
         match = self._require(image_bgr, "city_world_map")
         matches = list(clf.matches)
         if match is not None:
@@ -427,9 +365,16 @@ class DailyCommissionTask(TaskBase):
                 clf,
                 matches,
                 match,
-                f"当前不在{target}。点击「大地图」回到区域地图，再前往{target}。",
+                (
+                    f"当前在{current}，目标是{target}。"
+                    "点击「大地图」回到所属大区地图。"
+                    "不会点本城的「协会」或「探险」。"
+                ),
             )
-        missing = f"当前不在{target}，但没有匹配到「大地图」。不会改点本城的协会或探险。"
+        missing = (
+            f"当前在{current}，目标是{target}，但没有匹配到「大地图」。"
+            "不会改点本城的「协会」或「探险」。"
+        )
         return StepResult(
             scene=scene,
             reason=clf.reason,

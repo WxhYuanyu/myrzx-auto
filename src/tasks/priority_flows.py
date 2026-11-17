@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from src.tasks.base import PlannedAction, StepResult
 from src.tasks.phase import Phase
-from src.tasks import verbs
+from src.tasks import navigation, verbs
 from src.vision.types import Scene
 
 
@@ -145,12 +145,13 @@ def _foreign_association(task, image, clf):
 
 
 def _wrong_city(task, scene: Scene) -> bool:
+    """已确认的城市场景如果不是目标城，就要回大地图。不靠「协会」猜城。"""
     place = task.recipe.location
     if place is None:
         return False
-    if scene is Scene.CITY_TURANDON and place.city_scene is not Scene.CITY_TURANDON:
+    if scene is Scene.CITY_LILITOS and place.name != "王城莉莉托斯":
         return True
-    if scene is Scene.CITY_LILITOS and place.city_scene is Scene.CITY_TURANDON:
+    if scene is Scene.CITY_TURANDON and place.name != "图兰顿沙漠":
         return True
     return False
 
@@ -257,13 +258,22 @@ def step_accept_board(task, image, clf):
         return _click_association(task, image, clf)
     if scene is Scene.UNKNOWN:
         match = verbs.best_of(task, image, _association_ids(task))
-        if match is not None:
+        if match is not None and navigation.city_is_target(task, image, clf):
             return task._click_result(
                 scene,
                 clf,
                 list(clf.matches) + [match],
                 match,
                 f"进入「{_place_name(task)}」的协会。",
+            )
+        if match is not None:
+            return _halt(
+                task,
+                clf,
+                scene,
+                "不能凭协会认城",
+                f"看到共用建筑「协会」，但左上角标题不能确认是「{_place_name(task)}」。"
+                "不会把别的城当成王城莉莉托斯，也不会点进去。",
             )
         board = verbs.best_of(
             task,
@@ -337,6 +347,18 @@ def step_reenter_association(task, image, clf):
         if foreign is not None:
             return foreign
         return ADVANCE
+    if _wrong_city(task, clf.scene):
+        return task._plan_open_world_map(image, clf, clf.scene, here=clf.scene.zh_name)
+    if not navigation.city_is_target(task, image, clf):
+        if verbs.best_of(task, image, _association_ids(task)) is not None:
+            return _halt(
+                task,
+                clf,
+                clf.scene,
+                "不能凭协会认城",
+                f"要重新进入「{_place_name(task)}」的协会，但左上角标题对不上这座城。"
+                "不会因为看到共用的「协会」就点进去。",
+            )
     match = verbs.best_of(task, image, _association_ids(task))
     if match is not None:
         return task._click_result(
@@ -521,8 +543,26 @@ def step_skip_story(task, image, clf):
 
 def step_explore(task, image, clf):
     if _wrong_city(task, clf.scene):
-        return task._plan_open_world_map(image, clf, clf.scene)
+        return task._plan_open_world_map(image, clf, clf.scene, here=clf.scene.zh_name)
+    name = navigation.confirmed_city_name(task, image, clf)
+    place = task.recipe.location
+    if name and place and name != place.name:
+        return task._plan_open_world_map(image, clf, clf.scene, here=name)
     match = task._require(image, "city_explore") if "city_explore" in task.by_id else None
+    if (
+        match is not None
+        and place is not None
+        and name != place.name
+        and place.city_scene is not clf.scene
+    ):
+        return _halt(
+            task,
+            clf,
+            clf.scene,
+            "认不出当前城市",
+            f"要在「{_place_name(task)}」点「探险」，但左上角标题认不出这座城。"
+            "不会把别的城的「探险」当成目标。",
+        )
     if match is not None:
         task.step_armed = True
         return task._click_result(

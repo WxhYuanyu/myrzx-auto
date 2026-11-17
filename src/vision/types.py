@@ -26,6 +26,7 @@ class Scene(str, Enum):
     VICTORY = "VICTORY"
     QUEST_LOG = "QUEST_LOG"
     LOOT_REWARD = "LOOT_REWARD"
+    BAG = "BAG"
     UNKNOWN = "UNKNOWN"
     NEED_NEXT_SCREEN = "NEED_NEXT_SCREEN"
 
@@ -49,6 +50,7 @@ class Scene(str, Enum):
             Scene.VICTORY: "战斗胜利",
             Scene.QUEST_LOG: "任务日志",
             Scene.LOOT_REWARD: "获得物品",
+            Scene.BAG: "背包",
             Scene.UNKNOWN: "未能识别的页面",
             Scene.NEED_NEXT_SCREEN: "需要下一张尚未收集的截图",
         }[self]

@@ -20,6 +20,7 @@ if str(_ROOT) not in sys.path:
 from src import config  # noqa: E402
 from src.tasks.claim_dailies import ClaimDailiesTask  # noqa: E402
 from src.tasks.daily_commission import DailyCommissionTask  # noqa: E402
+from src.tasks.shop_buy import ShopBuyTask  # noqa: E402
 from src.tasks.phase import Phase  # noqa: E402
 from src.tasks.recipes import CommissionKind, get_recipe  # noqa: E402
 from src.vision.image import load_bgr  # noqa: E402
@@ -65,6 +66,14 @@ def main(argv: list[str] | None = None) -> int:
     if args.list_windows:
         return _cmd_list_windows()
 
+    if args.claim and args.shop:
+        print("--claim 和 --shop 不能同时使用。")
+        return 2
+    if args.live and args.shop:
+        return _cmd_shop()
+    if args.shop:
+        print("金币商店购买需要同时加上 --live。")
+        return 2
     if args.live and args.claim:
         return _cmd_claim()
     if args.claim:
@@ -108,6 +117,12 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="六次每日委托都做完后，一起打开带绿勾的任务卷轴，点每条标题和米色「完成」领奖。"
         "必须与 --live 一起使用。单条委托跑完时不会点「完成」。",
+    )
+    parser.add_argument(
+        "--shop",
+        action="store_true",
+        help="在任意一座城打开「商店」，点右下「金币」，把「可疑的果汁」和「魔铁矿」买空。"
+        "必须与 --live 一起使用，不能与 --claim 同时使用。",
     )
     parser.add_argument(
         "--quest",
@@ -294,6 +309,27 @@ def _cmd_claim() -> int:
     print(f"--live --claim：ADB {device.serial}，领取已完成的每日委托。")
     print("会点带绿勾的卷轴，再点每条标题（不点绿色印章）和详情里的米色「完成」。")
     print("未完成的委托不会去点。请不要手动点击。任何阶段都不会点「扫荡」。")
+    print()
+    result = run_live(task, source.grab, clicker, log=print)
+    print()
+    print(result.message)
+    return 0 if result.status == "done" else 1
+
+
+def _cmd_shop() -> int:
+    try:
+        device = connect_adb()
+    except AdbError as exc:
+        print(f"未能连接模拟器 ADB: {exc}")
+        return 1
+
+    task = ShopBuyTask()
+    source = AdbFrameSource(device)
+    clicker = AdbClicker(device)
+    print(f"--live --shop：ADB {device.serial}，在任意一座城把金币商店目标买空。")
+    print("点城里地图上的「商店」，再点右下「金币」。只点与目标同一行的「购买」。")
+    print("确认弹窗里的商品名对上才点「是」，对不上点「否」。")
+    print("不会点「购买全部」「兑换」「时装」「氪金」「完成」或「扫荡」。")
     print()
     result = run_live(task, source.grab, clicker, log=print)
     print()

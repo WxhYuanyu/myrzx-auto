@@ -2111,6 +2111,337 @@
       "notes": "2-9 选关页左下「青年 / 年轻的小哥」，只裁脸，不含右侧气泡和名字牌。给「处理毒桶」对话用，不点「进入」。",
       "width": 136,
       "height": 190
+    },
+    {
+      "id": "city_shop",
+      "file": "city_shop.png",
+      "source": "13-left.png",
+      "crop": [
+        600,
+        648,
+        770,
+        722
+      ],
+      "role": "click_only",
+      "label": "商店",
+      "click_target": true,
+      "threshold": 0.85,
+      "scales": [
+        1.0,
+        0.95,
+        1.05
+      ],
+      "notes": "城里地图上的「商店」招牌字，各城共用同一家商店。不要和金币商店标题里的「商店」搞混；已经在商店里时先认标题，不要再点这个。",
+      "width": 170,
+      "height": 74,
+      "scene": null
+    },
+    {
+      "id": "shop_gold_title",
+      "file": "shop_gold_title.png",
+      "source": "01-shop.png",
+      "crop": [
+        8,
+        528,
+        400,
+        668
+      ],
+      "role": "status",
+      "label": "金币商店",
+      "click_target": false,
+      "threshold": 0.85,
+      "scales": [
+        1.0
+      ],
+      "notes": "商店页左上标题「金币商店」，用来确认已经在金币页。",
+      "width": 392,
+      "height": 140,
+      "scene": null
+    },
+    {
+      "id": "shop_tab_gold",
+      "file": "shop_tab_gold.png",
+      "source": "01-shop.png",
+      "crop": [
+        888,
+        1688,
+        1058,
+        1900
+      ],
+      "role": "click_only",
+      "label": "金币",
+      "click_target": true,
+      "threshold": 0.8,
+      "scales": [
+        1.0,
+        0.95,
+        1.05
+      ],
+      "notes": "商店底部最右侧「金币」页签。不要点左边的「兑换」「时装」「氪金」。",
+      "width": 170,
+      "height": 212,
+      "scene": null
+    },
+    {
+      "id": "shop_leave",
+      "file": "shop_leave.png",
+      "source": "01-shop.png",
+      "crop": [
+        0,
+        1728,
+        228,
+        1878
+      ],
+      "role": "click_only",
+      "label": "离开",
+      "click_target": true,
+      "threshold": 0.85,
+      "scales": [
+        1.0
+      ],
+      "notes": "商店左下「离开」，买完后点它回城。不要和协会或选关的离开搞混，只在商店流程里用。",
+      "width": 228,
+      "height": 150,
+      "scene": null
+    },
+    {
+      "id": "shop_buy",
+      "file": "shop_buy.png",
+      "source": "04-cancel.png",
+      "crop": [
+        808,
+        1272,
+        1036,
+        1432
+      ],
+      "role": "click_only",
+      "label": "购买",
+      "click_target": true,
+      "threshold": 0.8,
+      "scales": [
+        1.0,
+        0.95,
+        1.05
+      ],
+      "notes": "清单一行右侧可点的米色「购买」。必须点与目标商品同一行的按钮，不要点「购买全部」。",
+      "width": 228,
+      "height": 160,
+      "scene": null
+    },
+    {
+      "id": "shop_buy_disabled",
+      "file": "shop_buy_disabled.png",
+      "source": "10-juice-soldout.png",
+      "crop": [
+        808,
+        1272,
+        1036,
+        1432
+      ],
+      "role": "status",
+      "label": "购买",
+      "click_target": false,
+      "threshold": 0.8,
+      "scales": [
+        1.0,
+        0.95,
+        1.05
+      ],
+      "notes": "买空后变灰的「购买」。可购数量是 0/n，不一定是 0/2；只有 1 份时买空就是 0/1。看到这一行变灰就当作买空，不要再点。",
+      "width": 228,
+      "height": 160,
+      "scene": null
+    },
+    {
+      "id": "shop_confirm_title",
+      "file": "shop_confirm_title.png",
+      "source": "05-buy-juice2.png",
+      "crop": [
+        400,
+        748,
+        680,
+        818
+      ],
+      "role": "status",
+      "label": "购买商品",
+      "click_target": false,
+      "threshold": 0.85,
+      "scales": [
+        1.0
+      ],
+      "notes": "购买确认弹窗标题「购买商品」。",
+      "width": 280,
+      "height": 70,
+      "scene": null
+    },
+    {
+      "id": "shop_confirm_prompt",
+      "file": "shop_confirm_prompt.png",
+      "source": "05-buy-juice2.png",
+      "crop": [
+        18,
+        580,
+        395,
+        688
+      ],
+      "role": "status",
+      "label": "操作提示",
+      "click_target": false,
+      "threshold": 0.8,
+      "scales": [
+        1.0
+      ],
+      "notes": "购买确认弹窗左上「操作提示」，用来判断确认框已弹出。",
+      "width": 377,
+      "height": 108,
+      "scene": null
+    },
+    {
+      "id": "shop_yes",
+      "file": "shop_yes.png",
+      "source": "05-buy-juice2.png",
+      "crop": [
+        228,
+        1078,
+        498,
+        1224
+      ],
+      "role": "click_only",
+      "label": "是",
+      "click_target": true,
+      "threshold": 0.85,
+      "scales": [
+        1.0
+      ],
+      "notes": "确认购买时的「是」。只有弹窗里的商品名和当前要点的目标一致时才点。",
+      "width": 270,
+      "height": 146,
+      "scene": null
+    },
+    {
+      "id": "shop_no",
+      "file": "shop_no.png",
+      "source": "05-buy-juice2.png",
+      "crop": [
+        598,
+        1078,
+        868,
+        1224
+      ],
+      "role": "click_only",
+      "label": "否",
+      "click_target": true,
+      "threshold": 0.85,
+      "scales": [
+        1.0
+      ],
+      "notes": "确认购买时的「否」。弹窗商品名对不上时点它取消。",
+      "width": 270,
+      "height": 146,
+      "scene": null
+    },
+    {
+      "id": "shop_confirm_juice",
+      "file": "shop_confirm_juice.png",
+      "source": "05-buy-juice2.png",
+      "crop": [
+        648,
+        824,
+        985,
+        890
+      ],
+      "role": "status",
+      "label": "可疑的果汁",
+      "click_target": false,
+      "threshold": 0.8,
+      "scales": [
+        1.0,
+        0.95,
+        1.05
+      ],
+      "notes": "确认弹窗里的「可疑的果汁×1」。这里的×1是每份份数，不是可购数量。用来核对要买的是不是果汁。",
+      "width": 337,
+      "height": 66,
+      "scene": null
+    },
+    {
+      "id": "shop_name_juice",
+      "file": "shop_name_juice.png",
+      "source": "04-cancel.png",
+      "crop": [
+        182,
+        1282,
+        508,
+        1348
+      ],
+      "role": "status",
+      "label": "可疑的果汁",
+      "click_target": false,
+      "threshold": 0.8,
+      "scales": [
+        1.0,
+        0.95,
+        1.05
+      ],
+      "notes": "金币清单一行上的商品名「可疑的果汁×1」。×1是每份份数。用来定位这一行，再点同一行的「购买」。",
+      "width": 326,
+      "height": 66,
+      "scene": null
+    },
+    {
+      "id": "shop_item_juice",
+      "file": "shop_item_juice.png",
+      "source": "04-cancel.png",
+      "crop": [
+        64,
+        1274,
+        175,
+        1382
+      ],
+      "role": "status",
+      "label": "可疑的果汁",
+      "click_target": false,
+      "threshold": 0.8,
+      "scales": [
+        1.0,
+        0.95,
+        1.05,
+        0.9,
+        1.1
+      ],
+      "notes": "金币清单里可疑的果汁图标，粉色杯子蓝框，不含右下角数量。可与商品名一起用来定位这一行。",
+      "width": 111,
+      "height": 108,
+      "scene": null
+    },
+    {
+      "id": "shop_item_magic_iron",
+      "file": "shop_item_magic_iron.png",
+      "source": "user-magic-iron.png",
+      "crop": [
+        5,
+        3,
+        88,
+        70
+      ],
+      "role": "status",
+      "label": "魔铁矿",
+      "click_target": false,
+      "threshold": 0.8,
+      "scales": [
+        1.0,
+        0.9,
+        1.1,
+        1.2,
+        1.25,
+        1.35,
+        1.5,
+        0.8
+      ],
+      "notes": "魔铁矿图标：蓝色晶体，蓝框，已去掉右下角数量。走查当天金币清单里没有这件，第一次在商店里见到后再补一行商品名和确认文案。只在图标对上时点同一行「购买」。",
+      "width": 83,
+      "height": 67,
+      "scene": null
     }
   ],
   "notes": "旧模板多从 tests/fixtures/screens 的局部裁切图取得；类型1全程在 tests/fixtures/walkthrough；类型2交物品在 tests/fixtures/turn_in；类型3多场战斗在 tests/fixtures/multi_battle。带 scales 的全分辨率模板只扫列出的尺度。喳喳布林入侵按屏幕原文。任何模板都不用于点击「扫荡」。"

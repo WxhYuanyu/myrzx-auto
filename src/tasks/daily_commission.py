@@ -43,7 +43,7 @@ import numpy as np
 from src import config
 from src.tasks.base import PlannedAction, StepResult, TaskBase
 from src.tasks.phase import Phase
-from src.tasks.priority_flows import plan_priority
+from src.tasks.priority_flows import close_open_bag, plan_priority, reset_item_check
 from src.tasks.recipes import CommissionKind, CommissionRecipe, ZHAZHA_BULIN
 from src.tasks import navigation, verbs
 from src.vision.bubble import find_explore_nodes, select_node_by_bubble
@@ -121,6 +121,12 @@ class DailyCommissionTask(TaskBase):
         self.pending_city = None
         self._pan_key: str | None = None
         self._match_cache: dict[str, Match | None] = {}
+        self.auto_sweep = False
+        self.sweep = None
+        self.sweep_move_next = False
+        self.item_ready = None
+        self.bag_swipes = 0
+        self.bag_tab_ready = False
 
     def plan(self, image_bgr: np.ndarray) -> StepResult:
         self._match_cache = {}
@@ -151,6 +157,22 @@ class DailyCommissionTask(TaskBase):
                 classification,
                 "点击右上角「跳过剧情」。不要点对话框里的其他地方。",
             )
+        if self._require(image_bgr, "ui_bag_title") is not None:
+            # 背包开着时不要当未知页去点回程或乱滑。
+            if self.recipe.flow:
+                return plan_priority(self, image_bgr, classification)
+            closed = close_open_bag(self, image_bgr, classification)
+            if closed is not None:
+                return closed
+        if (
+            self.auto_sweep
+            and self.sweep is not None
+            and self.sweep_move_next
+            and scene not in {Scene.COMMISSION_LIST, Scene.QUEST_DETAIL}
+        ):
+            stopped = self._advance_sweep(classification)
+            if stopped is not None:
+                return stopped
         nav = navigation.step(self, image_bgr, classification)
         if nav is not None:
             return nav
@@ -222,6 +244,33 @@ class DailyCommissionTask(TaskBase):
             status="unknown",
             message="未能识别当前页面，停止以免误点。",
         )
+
+    def _advance_sweep(self, clf) -> StepResult | None:
+        """当前档在这座城已经看完，换下一张图；这一档没了就换下一档，从第1图再来。"""
+        self.sweep_move_next = False
+        if self.sweep is None:
+            return None
+        if not self.sweep.advance_place_or_tier():
+            self.phase = Phase.DONE
+            message = (
+                f"高、中、低三档都看过了，共做了 {self.sweep.completed} 次。"
+                "先不点「完成」。可用 --live --claim 一起领。"
+            )
+            return StepResult(
+                scene=clf.scene,
+                reason=clf.reason,
+                matches=list(clf.matches),
+                action=PlannedAction(kind="halt", label="扫城结束", message=message),
+                status="done",
+                message=message,
+            )
+        self.recipe = self.sweep.travel_recipe()
+        self.phase = Phase.ACCEPT
+        self.step_index = 0
+        self.step_armed = False
+        self.node_selected = False
+        reset_item_check(self)
+        return None
 
     def _place(self):
         """这条委托要去的地点。没有图谱记录时返回 None。"""

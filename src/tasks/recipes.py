@@ -8,10 +8,20 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import Enum
+from enum import Enum, IntEnum
 
 from src import config
-from src.tasks.locations import BEI_SERAM, LIANHU, LILITOS, LITRILE, MapPlace, NAR, TURANDON
+from src.tasks.locations import (
+    BEI_SERAM,
+    LANGREN,
+    LIANHU,
+    LILITOS,
+    LITRILE,
+    MapPlace,
+    NAN_SERAM,
+    NAR,
+    TURANDON,
+)
 from src.vision.types import Scene
 
 
@@ -19,6 +29,18 @@ class CommissionKind(str, Enum):
     BATTLE = "battle"
     TURN_IN = "turn_in"
     MULTI_BATTLE = "multi_battle"
+
+
+class CommissionTier(IntEnum):
+    """每日委托的三档。用户原先叫优先 / 次级 / 最后，程序里改成高 / 中 / 低。"""
+
+    HIGH = 0
+    MEDIUM = 1
+    LOW = 2
+
+    @property
+    def zh_name(self) -> str:
+        return ("高", "中", "低")[int(self)]
 
 
 @dataclass(frozen=True)
@@ -53,6 +75,11 @@ class CommissionRecipe:
     # 地图册里没有的区域。有值时在区域地图上直接停，不编造坐标。
     unmapped_place: str | None = None
     summary: str = ""
+    # 高 / 中 / 低。扫城时先把所有高级做完，再从头扫中级，再扫低级。
+    tier: CommissionTier = CommissionTier.HIGH
+    # 接取前要先在背包里确认有这件物品。没有就不点「接收」。
+    required_item_template: str | None = None
+    required_item_name: str = ""
 
 
 # 画面原文是「喳喳布林入侵」。
@@ -242,7 +269,7 @@ STRANGE_BEAST = CommissionRecipe(
     stage_flag_template="stage_flag_3_23",
     stage_node="deep",
     stage_label="3-23-2",
-    awaiting_crops=frozenset({"stage_flag_3_23"}),
+    awaiting_crops=frozenset(),
     flow="seram_talk_return",
     steps=(
         "accept_board",
@@ -251,16 +278,22 @@ STRANGE_BEAST = CommissionRecipe(
         "enter_3_20",
         "talk_youth",
         "skip_story",
+        "leave_stage",
         "fight_3_23_2",
         "battle",
+        "leave_stage",
         "return_3_20",
         "talk_youth",
         "skip_story",
         "claim",
     ),
     summary=(
-        "奇怪的魔物：北赛拉姆接取后到 3-20 点青年的脸，打 3-23-2，"
-        "再回到 3-20 交任务。卡片上的铠甲骑士不是这个 NPC。"
+        "奇怪的魔物：北赛拉姆接取后离开协会，点城里「探险」进地区。"
+        "先点 3-20 旗帜（不要点气泡）和青年的脸，跳过剧情后点「离开」。"
+        "再点 3-23 旗帜，点「深入探索」的星星选中节点，然后点「进入」，不要点「扫荡」。"
+        "和讨伐食人花不同，这里点星星不会自己开打。战斗结束后再「离开」，"
+        "回 3-20 点青年的脸交任务。单条跑完不点「完成」，六次都做完后用 --claim 一起领。"
+        "卡片上的铠甲骑士不是这个 NPC。"
     ),
 )
 
@@ -374,35 +407,232 @@ LET_THEM_REST = CommissionRecipe(
     ),
 )
 
-RECIPES_BY_NAME: dict[str, CommissionRecipe] = {
-    ZHAZHA_BULIN.name: ZHAZHA_BULIN,
-    HATRED_GROWTH.name: HATRED_GROWTH,
-    EAGER_ADVENTURER.name: EAGER_ADVENTURER,
-    POISON_BARREL.name: POISON_BARREL,
-    MAN_EATER.name: MAN_EATER,
-    HOT_SPRING.name: HOT_SPRING,
-    STRANGE_BEAST.name: STRANGE_BEAST,
-    ROAD_BLOCKER.name: ROAD_BLOCKER,
-    TRAPPED_COMPANION.name: TRAPPED_COMPANION,
-    LET_THEM_REST.name: LET_THEM_REST,
+
+def _pending_recipe(
+    *,
+    quest_id: str,
+    name: str,
+    kind: CommissionKind,
+    location: MapPlace,
+    tier: CommissionTier,
+    objective_text: str,
+    summary: str,
+    stage_flag_template: str | None = None,
+    stage_node: str | None = None,
+    stage_label: str = "",
+    fights_required: int = 1,
+) -> CommissionRecipe:
+    """中、低级里还没实机走查的委托。可以登记和排序，但不会编造点击。"""
+    card = f"commission_{quest_id}"
+    log = f"quest_log_{quest_id}"
+    awaiting = {card, log}
+    if stage_flag_template:
+        awaiting.add(stage_flag_template)
+    return CommissionRecipe(
+        quest_id=quest_id,
+        name=name,
+        kind=kind,
+        card_template=card,
+        log_template=log,
+        objective_template=None,
+        npc_template=None,
+        objective_text=objective_text,
+        location=location,
+        stage_flag_template=stage_flag_template,
+        fights_required=fights_required,
+        flow="pending",
+        steps=("accept_board", "pending"),
+        stage_node=stage_node,
+        stage_label=stage_label,
+        awaiting_crops=frozenset(awaiting),
+        summary=summary,
+        tier=tier,
+    )
+
+
+CHANGE_TASTE = CommissionRecipe(
+    quest_id="change_taste",
+    name="换换口味",
+    kind=CommissionKind.TURN_IN,
+    card_template="commission_change_taste",
+    log_template="quest_log_change_taste",
+    objective_template=None,
+    npc_template="npc_strange_bat",
+    objective_text="交给龙骨滩5-5的奇怪的蝙蝠1份可疑的果汁",
+    location=LANGREN,
+    stage_flag_template="stage_flag_5_5",
+    stage_label="5-5",
+    awaiting_crops=frozenset(),
+    flow="langren_turn_in",
+    steps=(
+        "check_item",
+        "accept_board",
+        "leave_association",
+        "explore",
+        "fight_stage",
+        "talk_on_stage",
+        "skip_story",
+        "claim",
+    ),
+    summary=(
+        "换换口味：浪人岬协会接取的中级交物品委托。"
+        "目标是交给龙骨滩 5-5 的「奇怪的蝙蝠」1 份可疑的果汁。"
+        "接取前先打开背包「道具」页确认有可疑的果汁：有才点「接收」，没有就不接。"
+        "扫城时跳过这条且不占用每日次数；单独 --quest 则停下说明没有果汁。"
+        "详情页在接收前看不到所需物品，所以必须先查背包。怎么获得果汁还没走查，不会去打关或猜商店。"
+        "离开协会后点城里「探险」进浪人岬地区；5-5 默认画面上常常看不见，"
+        "要平移地区图直到看见旗帜再点，不要点旁边的对话气泡，也不要点「扫荡」。"
+        "进 5-5 选关页后点左下「奇怪的蝙蝠」的头像（不要点气泡），再跳过剧情即可上交。"
+        "单条跑完不点「完成」，六次都做完后用 --claim 一起领。"
+    ),
+    tier=CommissionTier.MEDIUM,
+    required_item_template="item_suspicious_juice",
+    required_item_name="可疑的果汁",
+)
+
+MAKE_MEDICINE = _pending_recipe(
+    quest_id="make_medicine",
+    name="制作药物",
+    kind=CommissionKind.BATTLE,
+    location=LITRILE,
+    tier=CommissionTier.MEDIUM,
+    objective_text="利特利尔大区的中级委托。任务要求还没补全。",
+    summary="制作药物：图8 利特利尔大区的中级委托。流程还没实机走查，不会瞎点。",
+)
+
+ADVENTURE_SQUAD = _pending_recipe(
+    quest_id="adventure_squad",
+    name="冒险小队寻求支援",
+    kind=CommissionKind.MULTI_BATTLE,
+    location=NAR,
+    tier=CommissionTier.MEDIUM,
+    objective_text="讨伐30只卡布缇莫（5-A7-3，每次10只）",
+    stage_flag_template="stage_flag_5_a7",
+    stage_node="basic",
+    stage_label="5-A7-3",
+    fights_required=3,
+    summary=(
+        "冒险小队寻求支援：图7 纳尔本接取的中级委托，去 5-A7-3 打三次"
+        "（每次10只卡布缇莫）。流程还没实机走查，不会瞎点。"
+    ),
+)
+
+ROAD_SAFE_LANGREN = _pending_recipe(
+    quest_id="road_safe_langren",
+    name="保证商路畅通",
+    kind=CommissionKind.BATTLE,
+    location=LANGREN,
+    tier=CommissionTier.LOW,
+    objective_text="接委托后通关 5-A2 初步探索",
+    stage_flag_template="stage_flag_5_a2",
+    stage_node="basic",
+    stage_label="5-A2",
+    summary=(
+        "保证商路畅通（浪人岬）：图5 的低级委托，通关 5-A2 初步探索。"
+        "和南赛拉姆那条同名委托不是同一条。流程还没实机走查，不会瞎点。"
+    ),
+)
+
+PROTECT_REPAIRMAN = _pending_recipe(
+    quest_id="protect_repairman",
+    name="保护维修工",
+    kind=CommissionKind.BATTLE,
+    location=NAN_SERAM,
+    tier=CommissionTier.LOW,
+    objective_text="挑战 4-2 任务",
+    stage_flag_template="stage_flag_4_2",
+    stage_label="4-2",
+    summary="保护维修工：图4 南赛拉姆的低级委托，挑战 4-2。流程还没实机走查，不会瞎点。",
+)
+
+ROAD_SAFE_NAN_SERAM = _pending_recipe(
+    quest_id="road_safe_nan_seram",
+    name="保证商路畅通",
+    kind=CommissionKind.BATTLE,
+    location=NAN_SERAM,
+    tier=CommissionTier.LOW,
+    objective_text="挑战 4-21-1",
+    stage_flag_template="stage_flag_4_21",
+    stage_node="basic",
+    stage_label="4-21-1",
+    summary=(
+        "保证商路畅通（南赛拉姆）：图4 的低级委托，挑战 4-21-1。"
+        "和浪人岬那条同名委托不是同一条。流程还没实机走查，不会瞎点。"
+    ),
+)
+
+# 高、中、低各按从图1到图9的地区顺序。同地区里保持表中的先后。
+ALL_RECIPES: tuple[CommissionRecipe, ...] = (
+    ZHAZHA_BULIN,
+    POISON_BARREL,
+    HOT_SPRING,
+    MAN_EATER,
+    STRANGE_BEAST,
+    ROAD_BLOCKER,
+    TRAPPED_COMPANION,
+    LET_THEM_REST,
+    HATRED_GROWTH,
+    EAGER_ADVENTURER,
+    CHANGE_TASTE,
+    MAKE_MEDICINE,
+    ADVENTURE_SQUAD,
+    ROAD_SAFE_LANGREN,
+    PROTECT_REPAIRMAN,
+    ROAD_SAFE_NAN_SERAM,
+)
+
+# 表里的简称对到游戏里的标题。
+NAME_ALIASES: dict[str, str] = {
+    "仇恨令我成长": "仇恨会令我成长",
+    "热情的冒险者": "“热情”的冒险者",
 }
+
+RECIPES_BY_NAME: dict[str, CommissionRecipe] = {}
+for _recipe in ALL_RECIPES:
+    # 同名委托（例如两个「保证商路畅通」）按地点区分，不覆盖先写入的那条。
+    RECIPES_BY_NAME.setdefault(_recipe.name, _recipe)
 
 # 还没走完的委托不要往这里填名字。未知名称会直接拒绝。
 PENDING_COMMISSIONS: tuple[str, ...] = ()
 
 
-def get_recipe(name: str | None = None) -> CommissionRecipe:
-    """按屏幕上的委托标题取配方。未知名称直接拒绝，不编造路线。"""
+def normalize_quest_name(name: str) -> str:
+    """把表里的简称换成游戏标题。"""
+    return NAME_ALIASES.get(name, name)
+
+
+def recipes_named(name: str) -> tuple[CommissionRecipe, ...]:
+    title = normalize_quest_name(name)
+    return tuple(recipe for recipe in ALL_RECIPES if recipe.name == title)
+
+
+def get_recipe(name: str | None = None, *, location: str | None = None) -> CommissionRecipe:
+    """按屏幕上的委托标题取配方。未知名称直接拒绝，不编造路线。
+
+    「保证商路畅通」有两条，必须带上地点（浪人岬或南赛拉姆）。
+    """
     if not name:
         return ZHAZHA_BULIN
-    recipe = RECIPES_BY_NAME.get(name)
-    if recipe is None:
-        known = "、".join(RECIPES_BY_NAME)
+    found = recipes_named(name)
+    if not found:
+        known = "、".join(dict.fromkeys(recipe.name for recipe in ALL_RECIPES))
         raise KeyError(
             f"尚未收录委托「{name}」。已有配方：{known}。"
             "不会为未收录的委托补阶段，也不会造模板。"
         )
-    return recipe
+    if len(found) == 1:
+        return found[0]
+    if location:
+        for recipe in found:
+            if recipe.location is not None and recipe.location.name == location:
+                return recipe
+    places = "、".join(
+        recipe.location.name if recipe.location is not None else "未知地点" for recipe in found
+    )
+    raise KeyError(
+        f"「{normalize_quest_name(name)}」有不止一条，请注明地点：{places}。"
+        "不会随便挑一条。"
+    )
 
 
 def register_recipe(recipe: CommissionRecipe) -> None:

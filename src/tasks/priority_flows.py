@@ -1,4 +1,4 @@
-"""七条优先委托各自的步骤。
+"""按高 / 中 / 低分档的每日委托步骤。
 
 区域地图上的开头仍走 daily_commission._plan_region_to_place（图谱里的地点）。
 这里只接「已经要去哪座城」之后的差别：重进协会、关卡上对话、
@@ -10,6 +10,7 @@ from __future__ import annotations
 from src.tasks.base import PlannedAction, StepResult
 from src.tasks.phase import Phase
 from src.tasks import navigation, verbs
+from src import config
 from src.vision.types import Scene
 
 
@@ -47,6 +48,15 @@ def plan_priority(task, image, clf) -> StepResult:
         if task.step_index >= len(steps):
             task.step_index = len(steps) - 1
         step = steps[task.step_index]
+        if _bag_open(task, image) and step != "check_item":
+            closed = close_open_bag(
+                task,
+                image,
+                clf,
+                "先关掉背包，再继续当前步骤。不要点格子里的物品。",
+            )
+            if closed is not None:
+                return closed
         if clf.scene is Scene.STORY_DIALOG:
             return _on_story(task, image, clf)
         handler = _HANDLERS.get(step)
@@ -193,7 +203,382 @@ def _pending_stage_message(task) -> str:
     )
 
 
+
+def _pick_sweep_card(task, image, clf):
+    """扫城时只接当前档、当前城里还没做的卡。有更高等级的也不会在中、低档去点。"""
+    sweep = task.sweep
+    candidates = sweep.candidates_here()
+    if not candidates:
+        return None
+    for recipe in candidates:
+        card = recipe.card_template
+        if _awaiting(task, card) or card not in task.by_id:
+            return _halt(
+                task,
+                clf,
+                clf.scene,
+                "标题裁切还没有",
+                f"「{recipe.name}」是{recipe.tier.zh_name}级委托，标题裁切还没有。"
+                "不会在这块板上改点别的档，也不会编造点击。",
+            )
+        match = task._require(image, card)
+        if match is None:
+            continue
+        changed = task.recipe.quest_id != recipe.quest_id
+        task.recipe = recipe
+        if changed:
+            reset_item_check(task)
+        task.phase = Phase.ACCEPT
+        task.step_index = 0
+        task.step_armed = False
+        task.node_selected = False
+        if recipe.required_item_template and getattr(task, "item_ready", None) is not True:
+            return step_check_item(task, image, clf)
+        return verbs.accept_listed_card(task, image, clf)
+    return None
+
+
+def _sweep_leave_board(task, image, clf, scene):
+    closed = verbs.close_with_back(
+        task,
+        image,
+        clf,
+        scene,
+        "这一档在这座城里已经没有还能认出的委托。用右上返回关掉列表，换下一站。"
+        "不要点屏幕底部「离开」。",
+    )
+    if closed is not None:
+        task.sweep_move_next = True
+        return closed
+    return _wait(task, clf, scene, "等待返回", "这一页还没有返回箭头。先等下一帧，不点别的。")
+
+
+def _finish_sweep_quest(task, clf):
+    sweep = task.sweep
+    sweep.mark_done(task.recipe)
+    done_name = task.recipe.name
+    cap = config.DAILY_COMMISSION_CAP
+    if sweep.cap_reached():
+        task.phase = Phase.DONE
+        message = (
+            f"「{done_name}」已做完，今天的 {cap} 次每日委托已经满了。"
+            "先不点「完成」。六次都做完后用 --live --claim 一起领。"
+        )
+        return StepResult(
+            scene=clf.scene,
+            reason=clf.reason,
+            matches=list(clf.matches),
+            action=PlannedAction(kind="halt", label="先不领奖", message=message),
+            status="done",
+            message=message,
+        )
+    if not sweep.candidates_here():
+        if not sweep.advance_place_or_tier():
+            task.phase = Phase.DONE
+            message = (
+                f"「{done_name}」已做完。高、中、低三档都看过了，共做了 {sweep.completed} 次。"
+                "先不点「完成」。可用 --live --claim 一起领。"
+            )
+            return StepResult(
+                scene=clf.scene,
+                reason=clf.reason,
+                matches=list(clf.matches),
+                action=PlannedAction(kind="halt", label="先不领奖", message=message),
+                status="done",
+                message=message,
+            )
+        task.sweep_advance = True
+    task.recipe = sweep.travel_recipe()
+    task.phase = Phase.ACCEPT
+    task.step_index = 0
+    task.step_armed = False
+    task.node_selected = False
+    reset_item_check(task)
+    place = task.recipe.location.name if task.recipe.location is not None else "下一站"
+    message = (
+        f"「{done_name}」已做完，先不领奖（{sweep.completed}/{cap}）。"
+        f"接着看{sweep.tier.zh_name}级：去「{place}」的「{task.recipe.name}」。"
+    )
+    return _wait(task, clf, clf.scene, "下一条委托", message, status="continue")
+
+
+def step_pending(task, image, clf):
+    return _halt(
+        task,
+        clf,
+        clf.scene,
+        "流程还没走查",
+        f"「{task.recipe.name}」是{task.recipe.tier.zh_name}级委托，流程还没实机走查。"
+        "不会编造点击，也不会点「扫荡」。",
+    )
+
+
+BAG_SWIPE_MAX = 20
+
+
+def reset_item_check(task) -> None:
+    task.item_ready = None
+    task.bag_swipes = 0
+    task.bag_tab_ready = False
+
+
+def _bag_open(task, image) -> bool:
+    return task._require(image, "ui_bag_title") is not None
+
+
+def close_open_bag(task, image, clf, message: str | None = None) -> StepResult | None:
+    """背包还开着时先用右上返回关上，不要点格子里的物品，也不要点任务卷轴。"""
+    if not _bag_open(task, image):
+        return None
+    text = message or "先关掉背包，不要点格子里的物品。"
+    back = task._require(image, "ui_bag_back")
+    if back is None:
+        back = task._require(image, "quest_detail_back")
+    if back is not None:
+        return task._click_result(
+            clf.scene,
+            clf,
+            list(clf.matches) + [back],
+            back,
+            text,
+            delay_sec=config.CLOSE_ANIMATION_SEC,
+        )
+    return _wait(
+        task,
+        clf,
+        clf.scene,
+        "等待关闭背包",
+        "背包还开着，但没认到返回箭头。先等下一帧，不点物品。",
+    )
+
+
+def _item_name(task) -> str:
+    return task.recipe.required_item_name or "所需物品"
+
+
+def _swipe_bag(task, image, clf, message: str) -> StepResult:
+    height, width = image.shape[:2]
+    # 只在道具格子上滑，避开顶上的分页和返回。
+    x = width // 2
+    y1 = int(height * 0.72)
+    y2 = int(height * 0.42)
+    action = PlannedAction(
+        kind="swipe",
+        label="下翻背包",
+        x=x,
+        y=y1,
+        x2=x,
+        y2=y2,
+        message=message,
+        delay_sec=0.6,
+    )
+    return StepResult(
+        scene=clf.scene,
+        reason=clf.reason,
+        matches=list(clf.matches),
+        action=action,
+        status="continue",
+        message=action.brief(),
+    )
+
+
+def _skip_missing_item(task, image, clf) -> StepResult:
+    name = task.recipe.name
+    item = _item_name(task)
+    scene = clf.scene
+    if scene in {Scene.COMMISSION_LIST, Scene.QUEST_DETAIL}:
+        closed = verbs.close_with_back(
+            task,
+            image,
+            clf,
+            scene,
+            f"背包里没有「{item}」，不接取「{name}」。用右上返回关掉列表。不要点屏幕底部「离开」。",
+        )
+        if closed is not None:
+            return closed
+    if task.auto_sweep and task.sweep is not None:
+        skipped = name
+        task.sweep.skip(task.recipe)
+        if task.sweep.candidates_here():
+            reset_item_check(task)
+            task.recipe = task.sweep.travel_recipe()
+            task.phase = Phase.ACCEPT
+            task.step_index = 0
+            task.step_armed = False
+            task.node_selected = False
+            return _wait(
+                task,
+                clf,
+                scene,
+                "跳过缺物品的委托",
+                f"背包里没有「{item}」，不接取「{skipped}」，也不占用每日次数。"
+                f"接着看本城的「{task.recipe.name}」。",
+                status="continue",
+            )
+        if not task.sweep.advance_place_or_tier():
+            task.phase = Phase.DONE
+            message = (
+                f"背包里没有「{item}」，不接取「{skipped}」。"
+                f"高、中、低三档都看过了，共做了 {task.sweep.completed} 次。"
+                "先不点「完成」。可用 --live --claim 一起领。"
+            )
+            return StepResult(
+                scene=scene,
+                reason=clf.reason,
+                matches=list(clf.matches),
+                action=PlannedAction(kind="halt", label="扫城结束", message=message),
+                status="done",
+                message=message,
+            )
+        reset_item_check(task)
+        task.recipe = task.sweep.travel_recipe()
+        task.phase = Phase.ACCEPT
+        task.step_index = 0
+        task.step_armed = False
+        task.node_selected = False
+        place = task.recipe.location.name if task.recipe.location is not None else "下一站"
+        return _wait(
+            task,
+            clf,
+            scene,
+            "跳过缺物品的委托",
+            f"背包里没有「{item}」，不接取「{skipped}」，也不占用每日次数。"
+            f"接着看{task.sweep.tier.zh_name}级：去「{place}」的「{task.recipe.name}」。",
+            status="continue",
+        )
+    return _halt(
+        task,
+        clf,
+        scene,
+        "没有所需物品",
+        f"背包里没有「{item}」，不接取「{name}」。这条单跑到此结束，不会占用每日次数。",
+    )
+
+
+def step_check_item(task, image, clf):
+    """接取前先开背包「道具」页，确认有所需物品才继续；没有就不接。"""
+    item_id = task.recipe.required_item_template
+    if not item_id:
+        return ADVANCE
+    item = _item_name(task)
+    name = task.recipe.name
+
+    if getattr(task, "item_ready", None) is not None:
+        if _bag_open(task, image):
+            if task.item_ready:
+                text = (
+                    f"背包里有「{item}」，关上背包后再接取「{name}」。不要点这件物品。"
+                )
+            else:
+                text = (
+                    f"翻完「道具」页也没有「{item}」，关上背包，不接取「{name}」。"
+                    "不要点格子里的物品。"
+                )
+            closed = close_open_bag(task, image, clf, text)
+            if closed is not None:
+                return closed
+        if task.item_ready:
+            return ADVANCE
+        return _skip_missing_item(task, image, clf)
+
+    if not _bag_open(task, image):
+        icon = task._require(image, "ui_bag_icon")
+        if icon is None:
+            return _wait(
+                task,
+                clf,
+                clf.scene,
+                "等待打开背包",
+                f"还没看到背包入口，先等下一帧。打开后查看是否有「{item}」。"
+                "不要点任务卷轴或邮件。",
+            )
+        return task._click_result(
+            clf.scene,
+            clf,
+            list(clf.matches) + [icon],
+            icon,
+            f"打开背包，查看是否有「{item}」。有才接取「{name}」，没有就不接。"
+            "不要点右侧任务卷轴或邮件。",
+            delay_sec=config.CLOSE_ANIMATION_SEC,
+        )
+
+    if not getattr(task, "bag_tab_ready", False):
+        task.bag_tab_ready = True
+        tab = task._require(image, "ui_bag_tab_items")
+        if tab is not None:
+            return task._click_result(
+                clf.scene,
+                clf,
+                list(clf.matches) + [tab],
+                tab,
+                f"点「道具」页，再找「{item}」。不要点格子里的物品。",
+            )
+        back = task._require(image, "ui_bag_back")
+        if back is not None:
+            x = back.box.x + back.box.w // 2 - 20
+            y = back.box.y + back.box.h + 80
+            action = PlannedAction(
+                kind="click",
+                label="道具",
+                x=int(x),
+                y=int(y),
+                message=f"点「道具」页，再找「{item}」。不要点格子里的物品。",
+            )
+            return StepResult(
+                scene=clf.scene,
+                reason=clf.reason,
+                matches=list(clf.matches) + [back],
+                action=action,
+                status="continue",
+                message=action.brief(),
+            )
+        return _wait(
+            task,
+            clf,
+            clf.scene,
+            "等待道具页",
+            f"背包已打开，但还没认到「道具」页。先等下一帧，不点物品。",
+        )
+
+    found = task._require(image, item_id)
+    if found is not None:
+        task.item_ready = True
+        closed = close_open_bag(
+            task,
+            image,
+            clf,
+            f"背包里有「{item}」，关上背包后再接取「{name}」。不要点这件物品。",
+        )
+        if closed is not None:
+            return closed
+        return ADVANCE
+
+    swipes = getattr(task, "bag_swipes", 0)
+    if swipes < BAG_SWIPE_MAX:
+        task.bag_swipes = swipes + 1
+        return _swipe_bag(
+            task,
+            image,
+            clf,
+            f"在「道具」页往下翻，找「{item}」（第 {task.bag_swipes}/{BAG_SWIPE_MAX} 次）。"
+            "不要点格子里的物品。",
+        )
+
+    task.item_ready = False
+    closed = close_open_bag(
+        task,
+        image,
+        clf,
+        f"翻完「道具」页也没有「{item}」，关上背包，不接取「{name}」。不要点格子里的物品。",
+    )
+    if closed is not None:
+        return closed
+    return _skip_missing_item(task, image, clf)
+
+
 def step_accept_board(task, image, clf):
+
+
     if task.phase is not Phase.ACCEPT:
         return ADVANCE
     if task.recipe.unmapped_place and clf.scene is Scene.UNKNOWN:
@@ -216,6 +601,12 @@ def step_accept_board(task, image, clf):
             f"「{task.recipe.name}」的标题裁切还没有，不会在委托板上改点别的卡。",
         )
     if scene is Scene.COMMISSION_LIST:
+        if getattr(task, "auto_sweep", False) and getattr(task, "sweep", None) is not None:
+            picked = _pick_sweep_card(task, image, clf)
+            if picked is not None:
+                return picked
+            # 这一档在这座城已经没有还能认出来的卡，关列表，换下一站。
+            return _sweep_leave_board(task, image, clf, scene)
         card = task.recipe.card_template
         if card and card in task.by_id and task._require(image, card) is not None:
             return verbs.accept_listed_card(task, image, clf)
@@ -447,14 +838,16 @@ def step_talk_youth(task, image, clf):
 
 def step_talk_on_stage(task, image, clf):
     npc = task.recipe.npc_template
+    where = task.recipe.stage_label or "关卡页"
     if _awaiting(task, npc) or not npc or npc not in task.by_id:
         return _halt(
             task,
             clf,
             clf.scene,
             "关卡 NPC 裁切还没有",
-            "「温泉治疗」要在关卡 2-11 上点任务 NPC 的脸，这张裁切还没有。"
-            "人在关卡上，不在协会里。不会点「协会大叔」，也不会猜一张脸。",
+            f"「{task.recipe.name}」要在关卡 {where} 上点任务 NPC 的脸，这张裁切还没有。"
+            "人在关卡上，不在协会里。不会点「协会大叔」，也不会猜一张脸，"
+            "也不要点「进入」或「扫荡」。",
         )
     match = task._require(image, npc)
     if match is not None:
@@ -464,14 +857,15 @@ def step_talk_on_stage(task, image, clf):
             clf,
             list(clf.matches) + [match],
             match,
-            "在 2-11 上点击任务 NPC 的脸，不要点气泡。",
+            f"在 {where} 点击任务 NPC 的脸，不要点气泡，也不要点「进入」或「扫荡」。",
         )
     return _halt(
         task,
         clf,
         clf.scene,
-        "未找到 2-11 的 NPC",
-        "已在关卡页，但没有匹配到温泉治疗的任务 NPC。不会点协会大叔，也不会猜一张脸。",
+        f"未找到 {where} 的 NPC",
+        f"已在关卡页，但没有匹配到「{task.recipe.name}」的任务 NPC。"
+        "不会点协会大叔，也不会猜一张脸，也不要点「进入」或「扫荡」。",
     )
 
 
@@ -563,6 +957,13 @@ def step_explore(task, image, clf):
         Scene.STAGE_9_7,
     }:
         return ADVANCE
+    region_marks = ["stage_flag_3_20", "stage_node_3_20", "stage_flag_3_23", "stage_return"]
+    flag = task.recipe.stage_flag_template
+    if flag:
+        region_marks.append(flag)
+    if verbs.best_of(task, image, tuple(region_marks)) is not None:
+        # 已经在地区图上（例如北赛拉姆、浪人岬地区），不必再点城里的「探险」。
+        return ADVANCE
     if verbs.best_of(task, image, ("stage_enter_gold", "stage_enter", "stage_leave", "stage_return")) is not None:
         # 已经在选关页或地区图，不必再点城里的「探险」。
         flag = task.recipe.stage_flag_template
@@ -576,7 +977,7 @@ def step_explore(task, image, clf):
     place = task.recipe.location
     if name and place and name != place.name:
         return task._plan_open_world_map(image, clf, clf.scene, here=name)
-    match = task._require(image, "city_explore") if "city_explore" in task.by_id else None
+    match = verbs.best_of(task, image, ("city_explore_label", "city_explore"))
     if (
         match is not None
         and place is not None
@@ -609,6 +1010,64 @@ def step_explore(task, image, clf):
     )
 
 
+_REGION_PAN_MAX = 24
+_REGION_PAN_ORDER = ("east", "south", "west", "north")
+
+
+def _region_map_markers(task) -> tuple[str, ...]:
+    ids = ["stage_return", "stage_flag_3_20", "stage_node_3_20", "stage_flag_3_23"]
+    flag = task.recipe.stage_flag_template
+    if flag and flag not in ids:
+        ids.append(flag)
+    return tuple(ids)
+
+
+def _on_region_map(task, image) -> bool:
+    return verbs.best_of(task, image, _region_map_markers(task)) is not None
+
+
+def _pan_region_for_flag(task, image, clf) -> StepResult:
+    """地区图上还看不到目标旗帜时换方向平移，直到看见再点，不猜坐标。"""
+    label = task.recipe.stage_label or "目标关卡"
+    place = _place_name(task)
+    key = f"region-flag:{task.recipe.quest_id}:{label}"
+    navigation._arm_pan(task, key)
+    if task.map_swipes >= _REGION_PAN_MAX:
+        return _halt(
+            task,
+            clf,
+            clf.scene,
+            "未找到关卡",
+            f"在「{place}」地区图上平移了 {_REGION_PAN_MAX} 次，还是没有匹配到「{label}」。"
+            "不会改点其他旗帜，也不会编造坐标，不会点「扫荡」。",
+        )
+    direction = _REGION_PAN_ORDER[task.map_swipes % len(_REGION_PAN_ORDER)]
+    task.map_swipes += 1
+    action = navigation._swipe(image, direction)
+    side = {"east": "东侧", "south": "南边", "west": "西侧", "north": "北边"}[direction]
+    action = PlannedAction(
+        kind="swipe",
+        label=action.label,
+        x=action.x,
+        y=action.y,
+        x2=action.x2,
+        y2=action.y2,
+        message=(
+            f"「{place}」地区图上还看不到「{label}」。先往{side}平移，"
+            "直到看见旗帜再点。不要点旁边的对话气泡，也不要点「扫荡」，"
+            f"更不要按固定坐标猜点。第 {task.map_swipes}/{_REGION_PAN_MAX} 次滑动。"
+        ),
+    )
+    return StepResult(
+        scene=clf.scene,
+        reason=clf.reason,
+        matches=list(clf.matches),
+        action=action,
+        status="continue",
+        message=action.message,
+    )
+
+
 def step_fight_stage(task, image, clf):
     flag = task.recipe.stage_flag_template
     if verbs.best_of(task, image, ("stage_enter_gold", "stage_enter")) is not None:
@@ -617,6 +1076,8 @@ def step_fight_stage(task, image, clf):
         return _halt(task, clf, clf.scene, "关卡裁切还没有", _pending_stage_message(task))
     match = task._require(image, flag)
     if match is not None:
+        task.map_swipes = 0
+        task._pan_key = None
         task.step_armed = True
         return task._click_result(
             clf.scene,
@@ -625,12 +1086,15 @@ def step_fight_stage(task, image, clf):
             match,
             f"点击关卡「{task.recipe.stage_label}」的旗帜和编号，不要点旁边的气泡，也不要点「扫荡」。",
         )
+    if _on_region_map(task, image):
+        return _pan_region_for_flag(task, image, clf)
     return _halt(
         task,
         clf,
         clf.scene,
         "未找到关卡",
-        f"没有匹配到「{task.recipe.stage_label}」。不会改点其他旗帜，也不会点「扫荡」。",
+        f"没有匹配到「{task.recipe.stage_label}」，而且现在也不像在地区图上。"
+        "不会改点其他旗帜，也不会点「扫荡」。",
     )
 
 
@@ -693,13 +1157,75 @@ def _click_node(task, image, clf, template_id: str, message: str, *, arm: bool):
     )
 
 
+def _click_first(task, image, clf, template_ids: tuple[str, ...], message: str, *, arm: bool):
+    available = tuple(template_id for template_id in template_ids if template_id in task.by_id)
+    if not available:
+        missing = "、".join(template_ids)
+        return _halt(
+            task,
+            clf,
+            clf.scene,
+            "节点裁切还没有",
+            f"「{missing}」还没有裁切，不会编造点击。",
+        )
+    match = verbs.best_of(task, image, available)
+    if match is None:
+        return None
+    if arm:
+        task.step_armed = True
+    return task._click_result(
+        clf.scene,
+        clf,
+        list(clf.matches) + [match],
+        match,
+        message,
+    )
+
+
+def step_leave_stage(task, image, clf):
+    """选关页点左下「离开」回到地区图。不要点「进入」「扫荡」或「下关卡」。"""
+    on_select = verbs.best_of(task, image, ("stage_enter_gold", "stage_enter", "stage_leave")) is not None
+    on_region = clf.scene in {
+        Scene.STAGE_MAP,
+        Scene.STAGE_DESERT,
+        Scene.STAGE_1_3,
+        Scene.STAGE_9_7,
+    } or verbs.best_of(
+        task,
+        image,
+        ("stage_flag_3_20", "stage_node_3_20", "stage_flag_3_23", "stage_return"),
+    ) is not None
+    if on_region and not on_select:
+        return ADVANCE
+    if on_select:
+        result = verbs.leave_stage_select(
+            task,
+            image,
+            clf,
+            clf.scene,
+            "点左下「离开」回到地区图。不要点「进入」「扫荡」或「下关卡」。",
+        )
+        if result.action is not None and result.action.kind == "click":
+            task.step_armed = True
+        return result
+    return _wait(
+        task,
+        clf,
+        clf.scene,
+        "等待离开选关",
+        "还没回到地区图，也还没看到左下「离开」。先等下一帧，不点「扫荡」。",
+    )
+
+
 def step_enter_3_20(task, image, clf):
-    clicked = _click_node(
+    if verbs.best_of(task, image, ("stage_enter_gold", "stage_enter")) is not None:
+        return ADVANCE
+    clicked = _click_first(
         task,
         image,
         clf,
-        "stage_node_3_20",
-        "点击关卡 3-20 的旗帜（三星和「3-20」）。不要点旁边的对话气泡，也不要改点 1-3。",
+        ("stage_flag_3_20", "stage_node_3_20"),
+        "点击关卡 3-20 的旗帜（爪印旗、三星和「3-20」）。不要点旁边的对话气泡，也不要改点 3-23。",
         arm=True,
     )
     if clicked is not None:
@@ -709,16 +1235,18 @@ def step_enter_3_20(task, image, clf):
         clf,
         clf.scene,
         "未找到 3-20",
-        "没有匹配到 3-20。不会改点 1-3 或其他旗帜。",
+        "北赛拉姆地区没有匹配到 3-20。不会改点 3-23 或其他旗帜。",
     )
 
 
 def step_return_3_20(task, image, clf):
-    clicked = _click_node(
+    if verbs.best_of(task, image, ("stage_enter_gold", "stage_enter")) is not None:
+        return ADVANCE
+    clicked = _click_first(
         task,
         image,
         clf,
-        "stage_node_3_20",
+        ("stage_flag_3_20", "stage_node_3_20"),
         "打完 3-23-2 后回到 3-20，再和青年对话交任务。点击 3-20 的旗帜，不要点气泡。",
         arm=True,
     )
@@ -733,26 +1261,79 @@ def step_return_3_20(task, image, clf):
     )
 
 
+def _enter_3_23_2(task, image, clf):
+    chosen = verbs.best_of(task, image, ("stage_enter_gold", "stage_enter"))
+    template_id = chosen.template_id if chosen is not None else "stage_enter_gold"
+    entered = verbs.press_stage_enter(
+        task,
+        image,
+        clf,
+        clf.scene,
+        template_id,
+        "「深入探索」已选中。点中下部金色「进入」（约 y=1600）。不要点更下面的「扫荡」。",
+    )
+    if entered.action is not None and entered.action.kind == "click":
+        task.step_armed = True
+    return entered
+
+
 def step_fight_3_23_2(task, image, clf):
+    """3-23 深入探索：先点旗帜，再点星星选中节点，然后点「进入」。点星星不会自己开打。"""
+    scene = clf.scene
+    if scene in {Scene.BATTLE, Scene.VICTORY, Scene.LOOT_REWARD, Scene.STORY_DIALOG}:
+        return ADVANCE
+    on_select = verbs.best_of(task, image, ("stage_enter_gold", "stage_enter", "stage_leave")) is not None
+    if on_select:
+        if task.node_selected:
+            return _enter_3_23_2(task, image, clf)
+        deep = "stage_3_23_deep"
+        if deep not in task.by_id:
+            return _halt(
+                task,
+                clf,
+                scene,
+                "深入探索裁切还没有",
+                "「奇怪的魔物」要在 3-23 点「深入探索」的星星选中节点，再点「进入」。"
+                "这张裁切还没有。不会只点四个字，也不会点树上的气泡或「扫荡」。",
+            )
+        match = task._require(image, deep)
+        if match is None:
+            return _halt(
+                task,
+                clf,
+                scene,
+                "未找到深入探索",
+                "已在 3-23 选关页，但没有匹配到「深入探索」的星星。"
+                "不要只点「深入探索」四个字，也不要点树上的气泡、「进入」或「扫荡」。",
+            )
+        task.node_selected = True
+        return task._click_result(
+            scene,
+            clf,
+            list(clf.matches) + [match],
+            match,
+            "点击 3-23「深入探索」的星星（3-23-2）。这只会选中节点，不会自己开打。"
+            "不要只点「深入探索」四个字，也不要点树上的气泡。选中后再点「进入」，不要点「扫荡」。",
+        )
     flag = "stage_flag_3_23"
-    if _awaiting(task, flag) or flag not in task.by_id:
+    if flag not in task.by_id:
         return _halt(
             task,
             clf,
-            clf.scene,
+            scene,
             "3-23 裁切还没有",
             "要去打 3-23-2（深入探索）。3-23 的旗帜裁切还没有。"
             "不会再点 3-20，也不会编造坐标，不会点「扫荡」。",
         )
     match = task._require(image, flag)
     if match is not None:
-        task.step_armed = True
+        task.node_selected = False
         return task._click_result(
             clf.scene,
             clf,
             list(clf.matches) + [match],
             match,
-            "点击 3-23，然后进入深入探索（3-23-2）。不要点 3-20，也不要点「扫荡」。",
+            "在北赛拉姆地区点击 3-23 的旗帜和编号。不要点 3-20，也不要点「扫荡」。",
         )
     return _halt(
         task,
@@ -889,6 +1470,10 @@ def step_battle(task, image, clf):
     battle_done = getattr(task, "fights_done", 0) >= required or task.phase is Phase.IN_BATTLE
     back_on_stage = verbs.best_of(task, image, ("stage_enter_gold", "stage_enter", "stage_leave")) is not None
     if battle_done and back_on_stage:
+        rest = task.recipe.steps[task.step_index + 1 :]
+        if any(step != "claim" for step in rest):
+            # 例如「奇怪的魔物」打完还要离开、回 3-20 交任务，不能在这里结束。
+            return ADVANCE
         return _finish_without_claim(task, clf)
     return _wait(
         task,
@@ -901,6 +1486,8 @@ def step_battle(task, image, clf):
 
 
 def _finish_without_claim(task, clf):
+    if getattr(task, "auto_sweep", False) and getattr(task, "sweep", None) is not None:
+        return _finish_sweep_quest(task, clf)
     task.phase = Phase.DONE
     message = verbs.work_done_without_claim_message(task.recipe.name)
     return StepResult(
@@ -923,6 +1510,7 @@ def step_claim(task, image, clf):
 
 
 _HANDLERS = {
+    "check_item": step_check_item,
     "accept_board": step_accept_board,
     "leave_association": step_leave_association,
     "reenter_association": step_reenter_association,
@@ -932,6 +1520,7 @@ _HANDLERS = {
     "talk_task_npc": step_talk_task_npc,
     "city_talk": step_city_talk,
     "skip_story": step_skip_story,
+    "leave_stage": step_leave_stage,
     "explore": step_explore,
     "fight_stage": step_fight_stage,
     "enter_basic_starts_battle": step_enter_basic_starts_battle,
@@ -943,4 +1532,5 @@ _HANDLERS = {
     "fight_9_7_deep": step_fight_9_7_deep,
     "battle": step_battle,
     "claim": step_claim,
+    "pending": step_pending,
 }

@@ -2113,6 +2113,302 @@
       "height": 190
     },
     {
+      "id": "city_explore_label",
+      "file": "city_explore_label.png",
+      "source": "strange-now.png",
+      "crop": [
+        772,
+        1810,
+        988,
+        1902
+      ],
+      "scene": "CITY",
+      "role": "click_only",
+      "label": "探险",
+      "click_target": true,
+      "notes": "北赛拉姆城内右下木牌上的「探险」二字。给城里进地区用。原来的 city_explore 是莉莉托斯底栏裁切，在北赛拉姆对不上。点木牌文字，不要点上面树上的气泡。",
+      "width": 216,
+      "height": 92,
+      "scales": [
+        1.0,
+        0.9,
+        0.8
+      ]
+    },
+    {
+      "id": "stage_flag_3_20",
+      "file": "stage_flag_3_20.png",
+      "source": "strange-back-region.png",
+      "crop": [
+        650,
+        380,
+        775,
+        545
+      ],
+      "scene": "STAGE_MAP",
+      "role": "click_target",
+      "label": "3-20",
+      "click_target": true,
+      "notes": "北赛拉姆地区的 3-20 旗帜：爪印旗、三星和「3-20」字样，不含右侧气泡。给「奇怪的魔物」进 3-20 对话、打完再回来交任务用，不点气泡。",
+      "width": 125,
+      "height": 165,
+      "scales": [
+        1.0,
+        0.9,
+        0.8
+      ]
+    },
+    {
+      "id": "stage_flag_3_23",
+      "file": "stage_flag_3_23.png",
+      "source": "strange-back-region.png",
+      "crop": [
+        0,
+        400,
+        168,
+        500
+      ],
+      "scene": "STAGE_MAP",
+      "role": "click_target",
+      "label": "3-23",
+      "click_target": true,
+      "notes": "北赛拉姆地区的 3-23：三星和「3-23」字样。旗帜上沿有时被说明文字挡住，所以只裁星星和编号。给「奇怪的魔物」进 3-23-2 用。",
+      "width": 168,
+      "height": 100,
+      "scales": [
+        1.0,
+        0.9,
+        0.8
+      ]
+    },
+    {
+      "id": "stage_3_23_deep",
+      "file": "stage_3_23_deep.png",
+      "source": "strange-3-23.png",
+      "crop": [
+        428,
+        808,
+        645,
+        952
+      ],
+      "scene": "STAGE_MAP",
+      "role": "click_target",
+      "label": "深入探索",
+      "click_target": true,
+      "notes": "3-23 选关页中间「深入探索」的星星（3-23-2）。点星星只会选中节点，还要再点「进入」才会开打。不要只点四个字，也不要点树上的气泡或「扫荡」。和讨伐食人花的 2-20-1 不同。",
+      "width": 217,
+      "height": 144,
+      "scales": [
+        1.0,
+        0.9,
+        0.8
+      ]
+    },
+    {
+      "id": "commission_change_taste",
+      "file": "commission_change_taste.png",
+      "source": "02-board.png",
+      "crop": [
+        730,
+        1072,
+        970,
+        1122
+      ],
+      "scene": "COMMISSION_LIST",
+      "role": "click_only",
+      "label": "换换口味",
+      "click_target": true,
+      "threshold": 0.9,
+      "scales": [
+        1.0
+      ],
+      "notes": "浪人岬协会委托板右下卡片标题「换换口味」。只裁标题，不含立绘或「紧急」角标。",
+      "width": 240,
+      "height": 50
+    },
+    {
+      "id": "quest_log_change_taste",
+      "file": "quest_log_change_taste.png",
+      "source": "06-detail.png",
+      "crop": [
+        100,
+        618,
+        385,
+        672
+      ],
+      "scene": "QUEST_LOG",
+      "role": "click_only",
+      "label": "换换口味",
+      "click_target": true,
+      "threshold": 0.9,
+      "scales": [
+        1.0
+      ],
+      "notes": "任务名「换换口味」，裁自详情页标题。日志里点这一行，不点绿色「完成」印章。",
+      "width": 285,
+      "height": 54
+    },
+    {
+      "id": "stage_flag_5_5",
+      "file": "stage_flag_5_5.png",
+      "source": "12-pan-right2.png",
+      "crop": [
+        0,
+        1210,
+        80,
+        1390
+      ],
+      "scene": "STAGE_MAP",
+      "role": "click_target",
+      "label": "5-5",
+      "click_target": true,
+      "notes": "浪人岬地区的 5-5 龙骨滩：爪印旗、三星和「5-5」字样，不含右侧对话气泡。给「换换口味」进 5-5 用，不点气泡。默认视角往往看不见，要在地区图上平移直到看见再点。",
+      "width": 80,
+      "height": 180,
+      "scales": [
+        1.0,
+        0.9,
+        0.8
+      ]
+    },
+    {
+      "id": "npc_strange_bat",
+      "file": "npc_strange_bat.png",
+      "source": "13-5-5.png",
+      "crop": [
+        18,
+        1438,
+        152,
+        1552
+      ],
+      "scene": "STAGE_MAP",
+      "role": "click_only",
+      "label": "奇怪的蝙蝠",
+      "click_target": true,
+      "threshold": 0.9,
+      "scales": [
+        1.0
+      ],
+      "notes": "龙骨滩 5-5 选关页左下「奇怪的蝙蝠」的头像，不含右侧三点气泡，也不把名字牌当点击中心。不要点「进入」或「扫荡」。交完可疑的果汁并跳过剧情后此人消失。",
+      "width": 134,
+      "height": 114
+    },
+    {
+      "id": "ui_bag_icon",
+      "file": "ui_bag_icon.png",
+      "source": "16-before-bag.png",
+      "crop": [
+        940,
+        240,
+        1060,
+        335
+      ],
+      "scene": "CITY",
+      "role": "click_only",
+      "label": "背包",
+      "click_target": true,
+      "notes": "城里右上角背包按钮，在任务卷轴右侧、邮件下方。打开背包前点这里，不要点卷轴或邮件。",
+      "width": 120,
+      "height": 95,
+      "scales": [
+        1.0,
+        0.9,
+        1.1
+      ]
+    },
+    {
+      "id": "ui_bag_title",
+      "file": "ui_bag_title.png",
+      "source": "17-bag.png",
+      "crop": [
+        20,
+        170,
+        310,
+        280
+      ],
+      "scene": "BAG",
+      "role": "scene_marker",
+      "label": "背包",
+      "click_target": false,
+      "notes": "背包页左上标题「背包」，用来确认背包已打开。",
+      "width": 290,
+      "height": 110,
+      "scales": [
+        1.0
+      ],
+      "threshold": 0.9
+    },
+    {
+      "id": "ui_bag_back",
+      "file": "ui_bag_back.png",
+      "source": "17-bag.png",
+      "crop": [
+        850,
+        150,
+        1020,
+        275
+      ],
+      "scene": "BAG",
+      "role": "click_only",
+      "label": "返回",
+      "click_target": true,
+      "notes": "背包页右上返回箭头，用来关掉背包。不要点格子里的物品。",
+      "width": 170,
+      "height": 125,
+      "scales": [
+        1.0
+      ]
+    },
+    {
+      "id": "ui_bag_tab_items",
+      "file": "ui_bag_tab_items.png",
+      "source": "17-bag.png",
+      "crop": [
+        800,
+        340,
+        1030,
+        410
+      ],
+      "scene": "BAG",
+      "role": "click_only",
+      "label": "道具",
+      "click_target": true,
+      "notes": "背包顶部「道具」分页。查可疑的果汁前点这一页，不要点装备或魔物蛋。",
+      "width": 230,
+      "height": 70,
+      "scales": [
+        1.0,
+        0.95,
+        1.05
+      ]
+    },
+    {
+      "id": "item_suspicious_juice",
+      "file": "item_suspicious_juice.png",
+      "source": "user-suspicious-juice.png",
+      "crop": [
+        30,
+        15,
+        148,
+        152
+      ],
+      "scene": "BAG",
+      "role": "status",
+      "label": "可疑的果汁",
+      "click_target": false,
+      "notes": "「换换口味」所需的可疑的果汁：粉色杯子，蓝框。按背包格子尺寸从用户提供的图标放大，不含右下角数量，以免两瓶以上对不上。只用来判断有没有，不要点击这件物品。",
+      "width": 118,
+      "height": 137,
+      "scales": [
+        1.0,
+        0.95,
+        1.05,
+        0.9,
+        1.1
+      ],
+      "threshold": 0.8
+    },
+    {
       "id": "city_shop",
       "file": "city_shop.png",
       "source": "13-left.png",

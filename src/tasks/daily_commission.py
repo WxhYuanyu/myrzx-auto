@@ -116,6 +116,7 @@ class DailyCommissionTask(TaskBase):
         self.step_armed = False
         self.node_selected = False
         self.title_reader = None
+        self.saw_continent = False
         self._pan_key: str | None = None
         self._match_cache: dict[str, Match | None] = {}
 
@@ -352,12 +353,33 @@ class DailyCommissionTask(TaskBase):
         scene: Scene,
         *,
         here: str | None = None,
+        returning: bool = False,
     ) -> StepResult:
         place = self._place()
         target = f"「{place.name}」" if place else "目标城市"
-        current = f"「{here}」" if here else "另一座城"
+        current = f"「{here}」" if here else "城内"
         match = self._require(image_bgr, "city_world_map")
         matches = list(clf.matches)
+        if returning:
+            click_message = (
+                "先退回大地图，直到看见「阿格莱恩」或「克里斯汀」。"
+                f"当前在{current}，点「大地图」。"
+                "不点本城的「协会」或「探险」。"
+            )
+            missing = (
+                f"要先从{current}退回大地图，但没有匹配到「大地图」。"
+                "不会点本城的「协会」或「探险」，也不会编造点击。"
+            )
+        else:
+            click_message = (
+                f"当前在{current}，目标是{target}。"
+                "点击「大地图」回到所属大区地图。"
+                "不会点本城的「协会」或「探险」。"
+            )
+            missing = (
+                f"当前在{current}，目标是{target}，但没有匹配到「大地图」。"
+                "不会改点本城的「协会」或「探险」。"
+            )
         if match is not None:
             matches = _merge_match(matches, match)
             return self._click_result(
@@ -365,16 +387,8 @@ class DailyCommissionTask(TaskBase):
                 clf,
                 matches,
                 match,
-                (
-                    f"当前在{current}，目标是{target}。"
-                    "点击「大地图」回到所属大区地图。"
-                    "不会点本城的「协会」或「探险」。"
-                ),
+                click_message,
             )
-        missing = (
-            f"当前在{current}，目标是{target}，但没有匹配到「大地图」。"
-            "不会改点本城的「协会」或「探险」。"
-        )
         return StepResult(
             scene=scene,
             reason=clf.reason,

@@ -1,18 +1,13 @@
-"""从任意画面退回当前大区地图，再在大区地图上进城。
+"""先退回大区地图，再在大区地图上进城。
 
-位置优先看左上角标题栏（标题 + 副标题）：模板对得上就用模板，
-否则用调用方提供的标题读取（OCR）。认不出就不点。
-
-退回（一次只走一步，直到看见阿格莱恩或克里斯汀）：
-- 嵌套区域点「回程」，回到上一级「…地区」。标题读得出（如「雨林之底」）
-  或读不出（如「滨海小镇」）都一样：画面上有「回程」就点它，不为每个地点做标题模板。
+退回时先不管当前是不是目标城，直到看见「阿格莱恩」或「克里斯汀」：
+- 看到「回程」就点「回程」。不为「滨海小镇」这类地点做标题模板。
   不点「雨林之底→」「冥土之国→」「←深海之城」这类传送门，也不点关卡或「扫荡」。
-- 标题以「地区」结尾（如「纳尔本地区」）点「回程」回城。
 - 选关 / 副本准备页点左下「离开」，不点「扫荡」。
-- 城内标题是城市名（不是「…地区」）时，目标若不是这座城，点「大地图」。
-  不点本城的「协会」或「探险」。协会是各城共用的建筑，不能用来判断是不是王城。
+- 城里点「大地图」，不点本城的「协会」或「探险」。
+认不出退回按钮就停，不编造点击。
 
-跨区：
+看见大区地图之后再判断目标在哪一边：
 - 人在阿格莱恩、目标在克里斯汀：停在地图最上侧时看不到「前往克里斯汀」，
   先把视野往南拉，看到页签再点。不点左下「离开」。
 - 人在克里斯汀、目标在阿格莱恩：点右下「返阿格莱恩」。左下「离开」只回当前城。
@@ -256,8 +251,8 @@ def click_unlisted_return(task: Any, image: np.ndarray, clf: Any) -> StepResult 
     if match is None or match.label != "回程" or is_portal_text(match.label):
         return None
     message = (
-        "还没到目标城，这一页也不是大区地图或委托界面。"
-        "画面上有「回程」，点它退回上一级。不依赖具体地点的标题模板。"
+        "先退回大地图，直到看见「阿格莱恩」或「克里斯汀」。"
+        "这一页有「回程」就点它，不论当前是不是目标城，也不依赖地点标题模板。"
         + _portal_sentence()
         + "也不会点关卡或「扫荡」。"
     )
@@ -268,41 +263,116 @@ def _target(task: Any) -> MapPlace | None:
     return getattr(task.recipe, "location", None)
 
 
-def step(task: Any, image: np.ndarray, clf: Any) -> StepResult | None:
-    """导航一步。返回 None 表示人已经在目标城里，或这一页交给委托流程。"""
-    if clf.scene in _QUEST_SCENES:
-        return None
-    heading = read_heading(task, image)
-    if heading is not None and heading.kind == "portal" and task.phase is Phase.ACCEPT:
+def _city_name(heading: Heading | None, clf: Any) -> str | None:
+    if heading is not None and heading.kind == "city":
+        return heading.title
+    if clf.scene is Scene.CITY_TURANDON:
+        return "图兰顿沙漠"
+    if clf.scene is Scene.CITY_LILITOS:
+        return "王城莉莉托斯"
+    return None
+
+
+def _on_continent(heading: Heading | None, clf: Any) -> bool:
+    if clf.scene in {Scene.WORLD_MAP, Scene.REGION_CRYSTIA}:
+        return True
+    return heading is not None and heading.kind == "continent"
+
+
+def _needs_map(task: Any) -> bool:
+    """还没看见过大区地图。接取前一律先退回去，哪怕人已经在目标城。"""
+    return task.phase is Phase.ACCEPT and not getattr(task, "saw_continent", False)
+
+
+def _leave_stage(task: Any, image: np.ndarray, clf: Any) -> StepResult:
+    return verbs.leave_stage_select(
+        task,
+        image,
+        clf,
+        clf.scene,
+        "选关或副本准备页点左下「离开」。不会点「扫荡」。",
+    )
+
+
+def _is_stage_prep(heading: Heading | None, clf: Any) -> bool:
+    if clf.scene in _PREP_SCENES:
+        return True
+    return heading is not None and heading.kind == "stage_prep"
+
+
+def _halt_unrecognized_exit(clf: Any) -> StepResult:
+    missing = (
+        "还没看见「阿格莱恩」或「克里斯汀」。"
+        "这一页没有「回程」，也不是选关页的「离开」或城里的「大地图」。"
+        "认不出怎么退回，不会编造点击，也不会点传送门或「扫荡」。"
+    )
+    return _halt(clf, clf.scene, "认不出退回", missing)
+
+
+def _return_until_continent(
+    task: Any, image: np.ndarray, clf: Any, heading: Heading | None
+) -> StepResult:
+    """先退回大地图。不根据地点标题决定要不要退。"""
+    if heading is not None and heading.kind in {"region_stage", "nested"}:
+        return click_return(task, image, clf, heading)
+    if clf.scene is Scene.STAGE_DESERT:
+        return click_return(
+            task,
+            image,
+            clf,
+            Heading("图兰顿沙漠地区", "", "region_stage"),
+        )
+    backed = click_unlisted_return(task, image, clf)
+    if backed is not None:
+        return backed
+    if _is_stage_prep(heading, clf):
+        return _leave_stage(task, image, clf)
+    city = _city_name(heading, clf)
+    if city is not None or clf.scene in {Scene.CITY_LILITOS, Scene.CITY_TURANDON}:
+        return task._plan_open_world_map(
+            image, clf, clf.scene, here=city, returning=True
+        )
+    if task._require(image, "city_world_map") is not None:
+        return task._plan_open_world_map(
+            image, clf, clf.scene, here=city, returning=True
+        )
+    if heading is not None and heading.kind == "portal":
         missing = (
             f"读到「{heading.title}」，这是传送门而不是地点标题。"
             + _portal_sentence()
-            + "嵌套区域要离开时只点「回程」。"
+            + "要退回时只点「回程」。"
         )
         return _halt(clf, clf.scene, "拒绝传送门", missing)
+    return _halt_unrecognized_exit(clf)
 
-    city = None
-    if heading is not None and heading.kind == "city":
-        city = heading.title
-    elif clf.scene is Scene.CITY_TURANDON:
-        city = "图兰顿沙漠"
-    elif clf.scene is Scene.CITY_LILITOS:
-        city = "王城莉莉托斯"
 
+def step(task: Any, image: np.ndarray, clf: Any) -> StepResult | None:
+    """导航一步。返回 None 表示可以在当前城里做委托，不必再退。"""
+    if clf.scene in _QUEST_SCENES:
+        return None
+    heading = read_heading(task, image)
+    if _on_continent(heading, clf):
+        task.saw_continent = True
+        return task._plan_region_to_place(image, clf)
+    if _needs_map(task):
+        return _return_until_continent(task, image, clf, heading)
+
+    city = _city_name(heading, clf)
     target = _target(task)
     if city and target and city != target.name:
         return task._plan_open_world_map(image, clf, clf.scene, here=city)
     if city and target and city == target.name:
         return None
 
-    on_continent = clf.scene in {Scene.WORLD_MAP, Scene.REGION_CRYSTIA} or (
-        heading is not None and heading.kind == "continent"
-    )
-    if on_continent:
-        return task._plan_region_to_place(image, clf)
-
     in_quest_stage = clf.scene in _PREP_SCENES or clf.scene is Scene.STAGE_DESERT
     if task.phase is Phase.ACCEPT:
+        if heading is not None and heading.kind == "portal":
+            missing = (
+                f"读到「{heading.title}」，这是传送门而不是地点标题。"
+                + _portal_sentence()
+                + "嵌套区域要离开时只点「回程」。"
+            )
+            return _halt(clf, clf.scene, "拒绝传送门", missing)
         if heading is not None and heading.kind in {"region_stage", "nested"}:
             return click_return(task, image, clf, heading)
         if clf.scene is Scene.STAGE_DESERT:
@@ -312,15 +382,8 @@ def step(task: Any, image: np.ndarray, clf: Any) -> StepResult | None:
                 clf,
                 Heading("图兰顿沙漠地区", "", "region_stage"),
             )
-        if (heading is not None and heading.kind == "stage_prep") or clf.scene in _PREP_SCENES:
-            return verbs.leave_stage_select(
-                task,
-                image,
-                clf,
-                clf.scene,
-                "选关或副本准备页点左下「离开」。不会点「扫荡」。",
-            )
-        # 标题还没录入（滨海小镇等）时也要退回，不能把这一页交给委托板。
+        if _is_stage_prep(heading, clf):
+            return _leave_stage(task, image, clf)
         unlisted = click_unlisted_return(task, image, clf)
         if unlisted is not None:
             return unlisted

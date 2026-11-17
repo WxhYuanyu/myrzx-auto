@@ -269,6 +269,7 @@ def test_rest_title_is_tight_and_the_face_excludes_the_badge(templates):
 
     task = _at(_task(templates, "请让他们安息"), "accept_board")
     task.phase = Phase.ACCEPT
+    task.saw_continent = True
     clicked = task.plan(card)
     assert clicked.action is not None
     assert clicked.action.kind == "click"

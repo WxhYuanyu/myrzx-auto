@@ -145,8 +145,16 @@ def test_city_before_accept_opens_association_not_the_face(turn_in, templates):
     result = task.plan(turn_in["city_npc"])
     assert result.scene is Scene.CITY_TURANDON
     assert result.action is not None
-    assert result.action.label == "协会"
     assert result.action.kind == "click"
+    assert result.action.label == "大地图"
+    assert result.action.label != "协会"
+    assert task.saw_continent is False
+
+    task.plan(turn_in["region"])
+    assert task.saw_continent is True
+    again = task.plan(turn_in["city_npc"])
+    assert again.action is not None
+    assert again.action.label == "协会"
 
 
 def test_adventurer_face_is_gone_after_the_dialogue(turn_in, templates):
@@ -264,11 +272,22 @@ def test_hatred_from_lilitos_association_leaves(walkthrough, templates):
     assert "图兰顿沙漠" in (result.action.message or "")
 
 
-def test_type1_from_lilitos_city_still_enters_association(walkthrough, templates):
+def test_type1_from_lilitos_city_returns_to_the_map_before_the_association(
+    walkthrough, templates
+):
     task = DailyCommissionTask(specs=templates)
     result = task.plan(walkthrough["wt_city"])
     assert result.action is not None
-    assert result.action.label == "协会"
+    assert result.action.kind == "click"
+    assert result.action.label == "大地图"
+    assert result.action.label != "协会"
+    assert result.action.label != "探险"
+
+    task.plan(walkthrough["wt_world_lilitos"])
+    assert task.saw_continent is True
+    again = task.plan(walkthrough["wt_city"])
+    assert again.action is not None
+    assert again.action.label == "协会"
 
 
 def test_type1_from_crystia_clicks_aglaen_tab(turn_in, templates):

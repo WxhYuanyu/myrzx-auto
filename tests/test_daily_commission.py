@@ -99,9 +99,12 @@ def test_unknown_image_halts_before_accept(templates):
     blank = np.zeros((400, 400, 3), dtype=np.uint8)
     result = task.plan(blank)
     assert result.scene is Scene.UNKNOWN
-    assert result.status == "unknown"
+    assert result.status == "halt_missing"
     assert result.action is not None
     assert result.action.kind == "halt"
+    assert result.action.x is None
+    assert "回程" in result.message
+    assert "扫荡" in result.message
 
 
 def test_unknown_image_is_skipped_after_accept(templates):

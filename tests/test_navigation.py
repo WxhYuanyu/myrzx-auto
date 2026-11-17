@@ -171,6 +171,29 @@ def test_other_city_opens_world_map_not_association_or_explore(templates):
     assert "探险" in (result.action.message or "")
 
 
+def test_target_city_still_opens_the_world_map_first(walkthrough, templates):
+    """人已经在目标城，也先点「大地图」，看到大区地图之后才进城接委托。"""
+    task = DailyCommissionTask(specs=templates, recipe=get_recipe("喳喳布林入侵"))
+    first = task.plan(walkthrough["wt_city"])
+    assert first.status == "continue"
+    assert first.action is not None
+    assert first.action.kind == "click"
+    assert first.action.label == "大地图"
+    assert first.action.label != "协会"
+    assert first.action.label != "探险"
+    assert "阿格莱恩" in (first.action.message or "")
+    assert task.saw_continent is False
+
+    opened = task.plan(walkthrough["wt_world_lilitos"])
+    assert opened.action is not None
+    assert opened.action.label == "王城莉莉托斯"
+    assert task.saw_continent is True
+
+    entered = task.plan(walkthrough["wt_city"])
+    assert entered.action is not None
+    assert entered.action.label == "协会"
+
+
 def test_confirmed_city_reenters_association_not_explore(templates):
     by_id = templates_by_id(templates)
     canvas = np.zeros((800, 700, 3), dtype=np.uint8)

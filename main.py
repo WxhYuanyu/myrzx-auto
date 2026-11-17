@@ -18,6 +18,7 @@ if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
 from src import config  # noqa: E402
+from src.tasks.claim_dailies import ClaimDailiesTask  # noqa: E402
 from src.tasks.daily_commission import DailyCommissionTask  # noqa: E402
 from src.tasks.phase import Phase  # noqa: E402
 from src.tasks.recipes import CommissionKind, get_recipe  # noqa: E402
@@ -64,6 +65,11 @@ def main(argv: list[str] | None = None) -> int:
     if args.list_windows:
         return _cmd_list_windows()
 
+    if args.live and args.claim:
+        return _cmd_claim()
+    if args.claim:
+        print("一起领取已完成的每日委托需要同时加上 --live。")
+        return 2
     if args.live:
         return _cmd_live(args.quest, start_phase=args.phase)
 
@@ -96,6 +102,12 @@ def _build_parser() -> argparse.ArgumentParser:
         "--live",
         action="store_true",
         help="（默认关闭）通过 MuMu 的 ADB 截图并真实点击。请同时用 --quest 指定委托。",
+    )
+    parser.add_argument(
+        "--claim",
+        action="store_true",
+        help="六次每日委托都做完后，一起打开带绿勾的任务卷轴，点每条标题和米色「完成」领奖。"
+        "必须与 --live 一起使用。单条委托跑完时不会点「完成」。",
     )
     parser.add_argument(
         "--quest",
@@ -263,6 +275,26 @@ def _cmd_live(quest_name: str, start_phase: str | None = None) -> int:
     print("从当前画面开始跑完全程。请不要手动点击。任何阶段都不会点「扫荡」。")
     print()
 
+    result = run_live(task, source.grab, clicker, log=print)
+    print()
+    print(result.message)
+    return 0 if result.status == "done" else 1
+
+
+def _cmd_claim() -> int:
+    try:
+        device = connect_adb()
+    except AdbError as exc:
+        print(f"未能连接模拟器 ADB: {exc}")
+        return 1
+
+    task = ClaimDailiesTask()
+    source = AdbFrameSource(device)
+    clicker = AdbClicker(device)
+    print(f"--live --claim：ADB {device.serial}，领取已完成的每日委托。")
+    print("会点带绿勾的卷轴，再点每条标题（不点绿色印章）和详情里的米色「完成」。")
+    print("未完成的委托不会去点。请不要手动点击。任何阶段都不会点「扫荡」。")
+    print()
     result = run_live(task, source.grab, clicker, log=print)
     print()
     print(result.message)

@@ -133,6 +133,24 @@ class DailyCommissionTask(TaskBase):
         multi = kind is CommissionKind.MULTI_BATTLE
         if scene is not Scene.VICTORY:
             self.victory_counted = False
+        skip = verbs.best_of(self, image_bgr, ("skip_story", "skip_story_tight"))
+        if skip is not None or scene is Scene.STORY_DIALOG:
+            steps = self.recipe.steps
+            if steps and "skip_story" in steps and self.recipe.flow:
+                current = steps[self.step_index] if self.step_index < len(steps) else ""
+                if current != "skip_story" and self.phase is Phase.ACCEPT:
+                    # 协会对话已经开始，不能再把阶段留在 ACCEPT，否则导航会重新点协会。
+                    self.phase = Phase.GO_STAGE
+                    self.step_index = steps.index("skip_story")
+                    current = "skip_story"
+                if current == "skip_story":
+                    self.step_armed = True
+            return verbs.skip_story(
+                self,
+                image_bgr,
+                classification,
+                "点击右上角「跳过剧情」。不要点对话框里的其他地方。",
+            )
         nav = navigation.step(self, image_bgr, classification)
         if nav is not None:
             return nav
@@ -1230,9 +1248,12 @@ class DailyCommissionTask(TaskBase):
         clf: Classification,
         *,
         matches: list[Match] | None = None,
+        message: str | None = None,
     ) -> StepResult:
         self.phase = Phase.DONE
-        message = verbs.claim_done_message(self.recipe.name)
+        if message is None:
+            # 走到这里通常是领奖页已经点过「完成」。单条委托的战斗结束不会走这里。
+            message = verbs.claim_done_message(self.recipe.name)
         return StepResult(
             scene=clf.scene,
             reason=clf.reason,

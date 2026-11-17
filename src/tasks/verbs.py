@@ -29,6 +29,13 @@ def claim_done_message(name: str) -> str:
     return f"「{name}」已领取完毕，任务日志中不再显示这条委托。"
 
 
+def work_done_without_claim_message(name: str) -> str:
+    return (
+        f"「{name}」的流程已经跑完，先不点「完成」。"
+        "六次每日委托都做完后再一起领奖。"
+    )
+
+
 def best_of(task: Any, image: Any, template_ids: tuple[str, ...]) -> Match | None:
     """在若干模板里取分数最高的命中。manifest 里没有的 id 会跳过。"""
     found: list[Match] = []

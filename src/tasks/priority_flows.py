@@ -216,7 +216,12 @@ def step_accept_board(task, image, clf):
             f"「{task.recipe.name}」的标题裁切还没有，不会在委托板上改点别的卡。",
         )
     if scene is Scene.COMMISSION_LIST:
-        return verbs.accept_listed_card(task, image, clf)
+        card = task.recipe.card_template
+        if card and card in task.by_id and task._require(image, card) is not None:
+            return verbs.accept_listed_card(task, image, clf)
+        # 列表里没有这张卡，当作已经接过：关列表，再按后续步骤离开、重进、对话。
+        task.phase = Phase.GO_STAGE
+        return ADVANCE
     if scene is Scene.UNKNOWN and card in task.by_id:
         match = task._require(image, card)
         if match is not None:
@@ -338,6 +343,13 @@ def step_leave_association(task, image, clf):
         Scene.STAGE_9_7,
     }:
         return ADVANCE
+    # 莉安湖等城还没有专属场景名，但「协会」「大地图」已经在城里。
+    if navigation.in_city(task, image) or navigation.city_is_target(task, image, clf):
+        return ADVANCE
+    if navigation.find_city_world_map(task, image) is not None:
+        return ADVANCE
+    if navigation.recognize_region(task, image) is not None:
+        return ADVANCE
     return _wait(task, clf, scene, "等待离开协会", "还在离开协会的过渡画面，先等下一帧。")
 
 
@@ -410,24 +422,26 @@ def step_talk_dashu(task, image, clf):
 
 
 def step_talk_youth(task, image, clf):
-    match = task._require(image, "npc_qingnian") if "npc_qingnian" in task.by_id else None
+    # 处理毒桶在 2-9 选关页、奇怪的魔物在 3-20，都是「青年 / 年轻的小哥」。
+    match = verbs.best_of(task, image, ("npc_qingnian_29", "npc_qingnian"))
     if match is not None:
         task.step_armed = True
+        where = task.recipe.stage_label or "关卡页"
         return task._click_result(
             clf.scene,
             clf,
             list(clf.matches) + [match],
             match,
-            "点击「青年 / 年轻的小哥」的脸，不要点气泡。"
-            "奇怪的魔物卡片上的铠甲骑士不是这个人。",
+            f"在 {where} 点击「青年 / 年轻的小哥」的脸，不要点气泡，"
+            "也不要点「进入」或「扫荡」。",
         )
     return _halt(
         task,
         clf,
         clf.scene,
         "未找到青年",
-        "3-20 上没有匹配到「青年」的脸。不会点对话气泡，"
-        "也不会把卡片上的铠甲骑士当成这个 NPC。",
+        f"在「{task.recipe.name}」要对话的关卡页上没有匹配到「青年」的脸。"
+        "不会点对话气泡，也不会点「进入」或「扫荡」。",
     )
 
 
@@ -542,6 +556,20 @@ def step_skip_story(task, image, clf):
 
 
 def step_explore(task, image, clf):
+    if clf.scene in {
+        Scene.STAGE_MAP,
+        Scene.STAGE_DESERT,
+        Scene.STAGE_1_3,
+        Scene.STAGE_9_7,
+    }:
+        return ADVANCE
+    if verbs.best_of(task, image, ("stage_enter_gold", "stage_enter", "stage_leave", "stage_return")) is not None:
+        # 已经在选关页或地区图，不必再点城里的「探险」。
+        flag = task.recipe.stage_flag_template
+        if flag and flag in task.by_id and task._require(image, flag) is not None:
+            return ADVANCE
+        if verbs.best_of(task, image, ("stage_enter_gold", "stage_enter")) is not None:
+            return ADVANCE
     if _wrong_city(task, clf.scene):
         return task._plan_open_world_map(image, clf, clf.scene, here=clf.scene.zh_name)
     name = navigation.confirmed_city_name(task, image, clf)
@@ -583,6 +611,8 @@ def step_explore(task, image, clf):
 
 def step_fight_stage(task, image, clf):
     flag = task.recipe.stage_flag_template
+    if verbs.best_of(task, image, ("stage_enter_gold", "stage_enter")) is not None:
+        return ADVANCE
     if _awaiting(task, flag) or not flag or flag not in task.by_id:
         return _halt(task, clf, clf.scene, "关卡裁切还没有", _pending_stage_message(task))
     match = task._require(image, flag)
@@ -593,7 +623,7 @@ def step_fight_stage(task, image, clf):
             clf,
             list(clf.matches) + [match],
             match,
-            f"点击关卡「{task.recipe.stage_label}」。不点旁边的旗帜，也不点「扫荡」。",
+            f"点击关卡「{task.recipe.stage_label}」的旗帜和编号，不要点旁边的气泡，也不要点「扫荡」。",
         )
     return _halt(
         task,
@@ -601,6 +631,42 @@ def step_fight_stage(task, image, clf):
         clf.scene,
         "未找到关卡",
         f"没有匹配到「{task.recipe.stage_label}」。不会改点其他旗帜，也不会点「扫荡」。",
+    )
+
+
+def step_enter_basic_starts_battle(task, image, clf):
+    """讨伐食人花：在 2-20 选关页点「初步探索」的星星，战斗自己开始。不要点「进入」。"""
+    scene = clf.scene
+    if scene in {Scene.BATTLE, Scene.VICTORY, Scene.LOOT_REWARD, Scene.STORY_DIALOG}:
+        return ADVANCE
+    node = "stage_2_20_basic"
+    if _awaiting(task, node) or node not in task.by_id:
+        return _halt(
+            task,
+            clf,
+            scene,
+            "初步探索裁切还没有",
+            "「讨伐食人花」要在 2-20 点「初步探索」的星星才能开打。"
+            "这张裁切还没有。不会点「进入」或「扫荡」，也不会只点四个字。",
+        )
+    match = task._require(image, node)
+    if match is not None:
+        task.step_armed = True
+        return task._click_result(
+            scene,
+            clf,
+            list(clf.matches) + [match],
+            match,
+            "点击 2-20「初步探索」的星星（2-20-1）。不要只点「初步探索」四个字，"
+            "也不要点岛上的气泡、「进入」或「扫荡」。点星星后战斗会自己开始。",
+        )
+    return _halt(
+        task,
+        clf,
+        scene,
+        "未找到初步探索",
+        "已在 2-20 选关页，但没有匹配到「初步探索」的星星。"
+        "不会点「进入」或「扫荡」，也不会改点深入或完全探索。",
     )
 
 
@@ -819,64 +885,41 @@ def step_battle(task, image, clf):
             finishes_quest=False,
             message="关掉这页掉落。委托奖励还没到领取那一步。",
         )
-    opened = verbs.open_quest_scroll(
-        task,
-        image,
-        clf,
-        scene,
-        "战斗已经结束，点击带绿勾的任务卷轴。不要点邮件或背包。",
-    )
-    if opened is not None:
-        if "claim" in task.recipe.steps:
-            task.step_index = task.recipe.steps.index("claim")
-            task.step_armed = False
-        return opened
+    required = getattr(task.recipe, "fights_required", 1) or 1
+    battle_done = getattr(task, "fights_done", 0) >= required or task.phase is Phase.IN_BATTLE
+    back_on_stage = verbs.best_of(task, image, ("stage_enter_gold", "stage_enter", "stage_leave")) is not None
+    if battle_done and back_on_stage:
+        return _finish_without_claim(task, clf)
     return _wait(
         task,
         clf,
         scene,
         "等待战斗",
-        "战斗还没结束，也还没看到胜利或绿勾卷轴。先等下一帧，不点「扫荡」。",
+        "战斗还没结束。先等下一帧，不点「扫荡」，也不要点「完成」。",
         status="waiting_battle" if scene is Scene.BATTLE else "skip_unknown",
     )
 
 
+def _finish_without_claim(task, clf):
+    task.phase = Phase.DONE
+    message = verbs.work_done_without_claim_message(task.recipe.name)
+    return StepResult(
+        scene=clf.scene,
+        reason=clf.reason,
+        matches=list(clf.matches),
+        action=PlannedAction(
+            kind="halt",
+            label="先不领奖",
+            message=message,
+        ),
+        status="done",
+        message=message,
+    )
+
+
 def step_claim(task, image, clf):
-    task.phase = Phase.CLAIM
-    scene = clf.scene
-    log_id = task.recipe.log_template
-    opened = verbs.open_quest_scroll(
-        task,
-        image,
-        clf,
-        scene,
-        "点击带绿勾的任务卷轴，打开任务日志。不要点邮件或背包。",
-    )
-    if opened is not None:
-        return opened
-    if scene is Scene.QUEST_LOG:
-        if _awaiting(task, log_id) or log_id not in task.by_id:
-            return _halt(
-                task,
-                clf,
-                scene,
-                "日志标题裁切还没有",
-                f"「{task.recipe.name}」的日志标题裁切还没有。"
-                "不会点绿色「完成」印章，也不会点别的委托。",
-            )
-        opened_row = task._plan_quest_log(image, clf)
-        return opened_row
-    if scene is Scene.QUEST_DETAIL:
-        return task._plan_quest_detail(image, clf)
-    if scene is Scene.LOOT_REWARD:
-        return task._plan_loot(image, clf)
-    return _wait(
-        task,
-        clf,
-        scene,
-        "等待领取",
-        f"还没看到「{task.recipe.name}」的绿勾卷轴或任务日志。先等下一帧，不点印章。",
-    )
+    # 单条委托跑完先不点「完成」。六次都做完后用 --claim 一起领。
+    return _finish_without_claim(task, clf)
 
 
 _HANDLERS = {
@@ -891,6 +934,7 @@ _HANDLERS = {
     "skip_story": step_skip_story,
     "explore": step_explore,
     "fight_stage": step_fight_stage,
+    "enter_basic_starts_battle": step_enter_basic_starts_battle,
     "enter_3_20": step_enter_3_20,
     "return_3_20": step_return_3_20,
     "fight_3_23_2": step_fight_3_23_2,

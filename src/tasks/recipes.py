@@ -111,8 +111,9 @@ _DASHU_FACES = (
     "npc_dashu_card_shire",
 )
 
-# 处理毒桶和讨伐食人花是同一条路线，只是关卡不同。不要并进别的类型1。
-_REENTER_DASHU_STEPS = (
+# 这两条都要先回莉安湖协会和会长对话，但 2-9 / 2-20 之后的做法不一样，不能共用一条「打关」路线。
+# 单条跑完先不点「完成」。六次每日委托都做完后，再用 --claim 一起领奖。
+_POISON_BARREL_STEPS = (
     "accept_board",
     "leave_association",
     "reenter_association",
@@ -121,8 +122,22 @@ _REENTER_DASHU_STEPS = (
     "leave_association",
     "explore",
     "fight_stage",
+    "talk_youth",
+    "skip_story",
     "battle",
-    "claim",
+)
+
+_MAN_EATER_STEPS = (
+    "accept_board",
+    "leave_association",
+    "reenter_association",
+    "talk_dashu",
+    "skip_story",
+    "leave_association",
+    "explore",
+    "fight_stage",
+    "enter_basic_starts_battle",
+    "battle",
 )
 
 POISON_BARREL = CommissionRecipe(
@@ -134,17 +149,19 @@ POISON_BARREL = CommissionRecipe(
     objective_template=None,
     npc_template="npc_xiehui_dashu",
     npc_templates=_DASHU_FACES,
-    objective_text="在莉安湖协会找到协会大叔，再去打 2-9",
+    objective_text="在莉安湖协会与协会会长对话，再去 2-9 与青年对话",
     location=LIANHU,
     stage_flag_template="stage_flag_2_9",
     stage_label="2-9",
-    awaiting_crops=frozenset({"stage_flag_2_9"}),
-    flow="lianhu_reenter_dashu",
-    steps=_REENTER_DASHU_STEPS,
+    flow="lianhu_poison_barrel",
+    steps=_POISON_BARREL_STEPS,
     summary=(
-        "处理毒桶：阿格莱恩点莉安湖 → 协会接取 → 离开后再进协会 → "
-        "点协会大叔的脸（不点气泡）→ 跳过剧情 → 去打 2-9 → "
-        "战斗中只点跳过剧情 → 卷轴、标题、完成、获得物品"
+        "处理毒桶：莉安湖协会接取后离开再进协会，点「协会大叔」的脸（不点气泡），"
+        "跳过剧情。离开协会，从城里点「探险」，在莉安湖地区点 2-9 旗帜"
+        "（点旗帜和「2-9」，不点气泡）。在选关页点左下「青年 / 年轻的小哥」的脸，"
+        "不要点气泡，也不要点「进入」或「扫荡」。跳过剧情后战斗会自己开始；"
+        "战斗中只点「跳过剧情」。胜利和掉落点「触摸继续」，战后剧情再跳过。"
+        "跑完先不点「完成」，六次每日委托都做完后再一起领奖。"
     ),
 )
 
@@ -157,17 +174,21 @@ MAN_EATER = CommissionRecipe(
     objective_template=None,
     npc_template="npc_xiehui_dashu",
     npc_templates=_DASHU_FACES,
-    objective_text="在莉安湖协会找到协会大叔，再去打 2-20-1",
+    objective_text="在莉安湖协会与协会会长对话，再去 2-20-1 讨伐食人花",
     location=LIANHU,
     stage_flag_template="stage_flag_2_20",
     stage_node="basic",
     stage_label="2-20-1",
-    awaiting_crops=frozenset({"stage_flag_2_20"}),
-    flow="lianhu_reenter_dashu",
-    steps=_REENTER_DASHU_STEPS,
+    flow="lianhu_man_eater",
+    steps=_MAN_EATER_STEPS,
     summary=(
-        "讨伐食人花：与处理毒桶相同，离开协会再进去点协会大叔的脸，"
-        "然后打 2-20-1（初步探索）。不点扫荡。"
+        "讨伐食人花：莉安湖协会接取后离开再进协会，点「协会大叔」的脸（不点气泡），"
+        "跳过剧情。离开协会，从城里点「探险」，在莉安湖地区点 2-20 旗帜"
+        "（点旗帜和「2-20」，不点气泡）。在选关页点左侧「初步探索」的星星"
+        "（2-20-1），不要只点「初步探索」四个字，也不要点岛上的气泡、"
+        "「进入」或「扫荡」。点星星后战斗会自己开始；战斗中途若有对白，"
+        "点右上「跳过剧情」。胜利和掉落后，跑完先不点「完成」，"
+        "六次每日委托都做完后再一起领奖。"
     ),
 )
 

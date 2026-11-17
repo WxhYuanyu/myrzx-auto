@@ -1456,6 +1456,21 @@
       "height": 64
     },
     {
+      "id": "city_world_map_text_alt",
+      "file": "city_world_map_text_alt.png",
+      "source": "tests/fixtures/navigation/city_litrile.png",
+      "crop": [520, 1288, 760, 1360],
+      "scene": null,
+      "role": "click_only",
+      "label": "大地图",
+      "click_target": true,
+      "threshold": 0.9,
+      "scales": [1.0, 0.9, 0.95, 1.05, 1.1],
+      "notes": "另一帧城内「大地图」三个字。北赛拉姆那张紧裁在这帧上不到 0.9。和另外两张认到任一就点，不是某座城的专用流程。",
+      "width": 240,
+      "height": 72
+    },
+    {
       "id": "city_title_litrile",
       "file": "city_title_litrile.png",
       "source": "tests/fixtures/navigation/city_litrile.png",
@@ -1507,7 +1522,7 @@
         1.05,
         1.1
       ],
-      "notes": "各城共用的「大地图」三个字，带描边，尽量少带地面。从北赛拉姆实机图裁出。和 city_world_map 任一命中即可点，不把协会、探险、农场、商店、酒馆当成它。",
+      "notes": "各城共用的「大地图」三个字，带描边，尽量少带地面。从北赛拉姆实机图裁出。和 city_world_map、city_world_map_text_alt 任一命中即可点，不把协会、探险、农场、商店、酒馆当成它。",
       "width": 225,
       "height": 82
     },

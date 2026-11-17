@@ -398,13 +398,18 @@ def test_unknown_frame_after_a_continent_is_not_a_commission_board(templates):
     assert planned.action.kind == "wait"
 
 
-def test_navigation_step_returns_none_only_inside_the_target_city(walkthrough, templates):
+def test_navigation_step_clicks_association_after_the_continent(walkthrough, templates):
     task = DailyCommissionTask(specs=templates, recipe=get_recipe("喳喳布林入侵"))
     city = walkthrough["wt_city"]
     before = classify_scene(city, templates)
-    assert navigation_step(task, city, before) is not None
+    leaving = navigation_step(task, city, before)
+    assert leaving is not None and leaving.action is not None
+    assert leaving.action.label == "大地图"
     task.saw_continent = True
-    assert navigation_step(task, city, before) is None
+    entered = navigation_step(task, city, before)
+    assert entered is not None and entered.action is not None
+    assert entered.action.kind == "click"
+    assert entered.action.label == "协会"
     world = classify_scene(walkthrough["wt_world_lilitos"], templates)
     assert navigation_step(task, walkthrough["wt_world_lilitos"], world) is not None
 
@@ -548,32 +553,53 @@ CITY_LITRILE = (
 )
 
 
-def test_target_town_clicks_association_and_other_towns_open_the_map(templates):
-    """进了目标城就点协会。别的城仍点大地图。不按某一座城写死。"""
+def test_target_town_clicks_association_only_after_the_continent(templates):
+    """没回过大地图时，目标城也先点大地图。回来之后才点协会。别的城仍点大地图。"""
     litrile = load_bgr(CITY_LITRILE)
-    arrived = DailyCommissionTask(specs=templates, recipe=get_recipe("受困的同伴")).plan(litrile)
-    assert arrived.status == "continue"
-    assert arrived.action is not None
-    assert arrived.action.kind == "click"
-    assert arrived.action.label == "协会"
-    assert arrived.action.label not in {"商店", "酒馆", "探险", "农场", "挑战任务", "大地图"}
-    assert arrived.action.match is not None
-    assert arrived.action.match.label == "协会"
-    assert (arrived.action.x, arrived.action.y) == arrived.action.match.box.center
-    assert "等待大地图" not in (arrived.action.label or "")
+    fresh = DailyCommissionTask(specs=templates, recipe=get_recipe("受困的同伴")).plan(litrile)
+    assert fresh.status == "continue"
+    assert fresh.action is not None
+    assert fresh.action.kind == "click"
+    assert fresh.action.label == "大地图"
+    assert fresh.action.label != "协会"
+    assert fresh.action.match is not None
+    assert (fresh.action.x, fresh.action.y) == fresh.action.match.box.center
+
+    by_title = DailyCommissionTask(specs=templates, recipe=get_recipe("受困的同伴"))
+    by_title.saw_continent = True
+    titled = by_title.plan(litrile)
+    assert titled.status == "continue"
+    assert titled.action is not None
+    assert titled.action.kind == "click"
+    assert titled.action.label == "协会"
+    assert titled.action.label not in {"商店", "酒馆", "探险", "农场", "挑战任务", "大地图"}
+    assert titled.action.match is not None
+    assert titled.action.match.label == "协会"
+    assert (titled.action.x, titled.action.y) == titled.action.match.box.center
+    assert titled.action.label != "等待大地图"
+
+    by_pending = DailyCommissionTask(specs=templates, recipe=get_recipe("受困的同伴"))
+    by_pending.saw_continent = True
+    by_pending.pending_city = "利特利尔大区"
+    pending = by_pending.plan(litrile)
+    assert pending.action is not None
+    assert pending.action.kind == "click"
+    assert pending.action.label == "协会"
 
     bei = load_bgr(CITY_BEI_SERAM)
-    other = DailyCommissionTask(specs=templates, recipe=get_recipe("受困的同伴")).plan(bei)
-    assert other.status == "continue"
-    assert other.action is not None
-    assert other.action.kind == "click"
-    assert other.action.label == "大地图"
-    assert other.action.label != "协会"
+    other = DailyCommissionTask(specs=templates, recipe=get_recipe("受困的同伴"))
+    other.saw_continent = True
+    opened = other.plan(bei)
+    assert opened.status == "continue"
+    assert opened.action is not None
+    assert opened.action.kind == "click"
+    assert opened.action.label == "大地图"
+    assert opened.action.label != "协会"
 
-    # 刚在区域地图上点过目标地名，下一张只有「协会」的城也按目标城处理。
     canvas = np.zeros((800, 700, 3), dtype=np.uint8)
     _paste(canvas, templates_by_id(templates)["city_association"].image_bgr, 80, 220)
     followed = DailyCommissionTask(specs=templates, recipe=get_recipe("处理毒桶"))
+    followed.saw_continent = True
     followed.pending_city = "莉安湖"
     entered = followed.plan(canvas)
     assert entered.action is not None

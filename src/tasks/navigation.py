@@ -398,7 +398,11 @@ def _halt_unrecognized_exit(clf: Any) -> StepResult:
     return _halt(clf, clf.scene, "认不出退回", missing)
 
 
-CITY_WORLD_MAP_BUTTONS = ("city_world_map", "city_world_map_text")
+CITY_WORLD_MAP_BUTTONS = (
+    "city_world_map",
+    "city_world_map_text",
+    "city_world_map_text_alt",
+)
 
 
 def find_city_world_map(task: Any, image: np.ndarray) -> Match | None:
@@ -505,19 +509,19 @@ def _settle_unrecognized_exit(
         and exiting.action.label == "认不出退回"
     )
     if unrecognized and in_city(task, image):
-        if city_is_target(task, image, clf):
+        # 还没回过大地图时，目标城也先出城，这里不点「协会」。
+        if getattr(task, "saw_continent", False) and city_is_target(task, image, clf):
             place = _target(task)
             return _click_city_association(
                 task, image, clf, place.name if place is not None else "目标城"
             )
-        opened = task._plan_open_world_map(
+        return task._plan_open_world_map(
             image,
             clf,
             clf.scene,
             here=confirmed_city_name(task, image, clf),
             returning=True,
         )
-        return opened
     if unrecognized and getattr(task, "saw_continent", False):
         if _quest_widget_visible(task, image):
             return None
@@ -544,7 +548,7 @@ def _wait_for_region(clf: Any) -> StepResult:
 
 
 def step(task: Any, image: np.ndarray, clf: Any) -> StepResult | None:
-    """导航一步。只有已经确认在目标城里，才返回 None 交给委托流程。"""
+    """导航一步。接取前，回过大地图并确认是目标城就点「协会」，不把这一步交给委托板。"""
     if clf.scene in _QUEST_SCENES:
         return None
     if task.phase is not Phase.ACCEPT and (
@@ -555,7 +559,13 @@ def step(task: Any, image: np.ndarray, clf: Any) -> StepResult | None:
     if recognize_region(task, image) is not None or _on_continent(heading, clf):
         task.saw_continent = True
         return task._plan_region_to_place(image, clf)
-    if task.phase is Phase.ACCEPT and not getattr(task, "saw_continent", False):
+    saw = getattr(task, "saw_continent", False)
+    if task.phase is Phase.ACCEPT and saw and city_is_target(task, image, clf):
+        place = _target(task)
+        return _click_city_association(
+            task, image, clf, place.name if place is not None else "目标城"
+        )
+    if task.phase is Phase.ACCEPT and not saw:
         return _settle_unrecognized_exit(
             task, image, clf, _return_until_continent(task, image, clf, heading)
         )

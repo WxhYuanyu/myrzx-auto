@@ -84,7 +84,7 @@ AGLAEN = Region(
     inbound_tab_source="tests/fixtures/turn_in/01_region_crystia.png",
     notes=(
         "左上蓝色横幅「阿格莱恩 / Allgreen Independent Kingdom」。"
-        "去克里斯汀时，先把地图滑到南边的「浪人岬」，再向左划，"
+        "去克里斯汀时，先把地图滑到南边的「浪人岬」，再手指从左向右滑，"
         "把左边被切掉的「前往克里斯汀」整块拉出来再点；"
         "这个页签不是常驻底栏，停在王城附近时看不见。"
         "不要用左下「离开」切换区域：停在当前城市上时，离开会回城。"

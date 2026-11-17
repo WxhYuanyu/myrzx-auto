@@ -107,7 +107,7 @@ class DailyCommissionTask(TaskBase):
         self.phase = Phase.ACCEPT
         self.awaiting_enter = False
         self.map_swipes = 0
-        self.crystia_left_swipes = 0
+        self.crystia_reveal_swipes = 0
         self.battle_started_at: float | None = None
         self.loot_claimed = False
         self.fights_done = 0
@@ -267,7 +267,7 @@ class DailyCommissionTask(TaskBase):
             )
             return self._click_result(clf.scene, clf, matches, tab, message)
 
-        # 阿格莱恩上整块「前往克里斯汀」还没出现：先上滑到「浪人岬」，再左划把旗帜拉全。
+        # 阿格莱恩上整块「前往克里斯汀」还没出现：先上滑到「浪人岬」，再手指从左向右把旗帜拉全。
         if (
             place.region.inbound_tab_template == "region_tab_crystia"
             and other_name == "阿格莱恩"
@@ -298,10 +298,10 @@ class DailyCommissionTask(TaskBase):
         """整块「前往克里斯汀」还没对上。
 
         先手指上划到南边的「浪人岬」。旗帜往往只在左边缘露出右半截，
-        这时再手指从右向左划一次，把左边被切掉的金色旗帜完整拉进来，然后才点。
+        这时手指从左向右滑，把屏外的左边拉进画面，整块对上再点。
         """
         if self._require(image_bgr, "world_langren") is not None:
-            return self._swipe_left_to_reveal_crystia_tab(
+            return self._swipe_right_to_reveal_crystia_tab(
                 image_bgr, clf, matches, place
             )
         if self.map_swipes < config.MAP_SWIPE_MAX:
@@ -319,7 +319,7 @@ class DailyCommissionTask(TaskBase):
                 message=(
                     "当前是阿格莱恩大地图。停在最上侧时看不到南边的「浪人岬」和「前往克里斯汀」，"
                     "不要假设旗帜已经在画面上。手指上划，把视野往南边海边拉。"
-                    "看到「浪人岬」之后还要再向左划，把被切在左边缘的「前往克里斯汀」整块拉出来再点。"
+                    "看到「浪人岬」之后，手指再从左向右滑，把被切在左边缘的「前往克里斯汀」整块拉出来再点。"
                     f"然后前往「{place.region.name}」的「{place.name}」。"
                     f"第 {self.map_swipes}/{config.MAP_SWIPE_MAX} 次南滑。"
                     "不要点左下「离开」，也不要进王城莉莉托斯。"
@@ -346,33 +346,34 @@ class DailyCommissionTask(TaskBase):
             message=missing,
         )
 
-    def _swipe_left_to_reveal_crystia_tab(
+    def _swipe_right_to_reveal_crystia_tab(
         self,
         image_bgr: np.ndarray,
         clf: Classification,
         matches: list[Match],
         place,
     ) -> StepResult:
-        """南边已经有「浪人岬」。旗帜在左边被切掉时，手指从右向左划。"""
-        if self.crystia_left_swipes < config.MAP_SWIPE_MAX:
-            self.crystia_left_swipes += 1
+        """南边已经有「浪人岬」。旗帜被切在左边缘时，手指从左向右滑。"""
+        if self.crystia_reveal_swipes < config.MAP_SWIPE_MAX:
+            self.crystia_reveal_swipes += 1
             height, width = image_bgr.shape[:2]
             y = int(height * 0.72)
-            x1, x2 = int(width * 0.78), int(width * 0.22)
+            # 手指从左往右。内容跟着向右移，左边被切掉的旗帜才进画面。
+            x1, x2 = int(width * 0.22), int(width * 0.78)
             action = PlannedAction(
                 kind="swipe",
-                label="向左滑动地图",
+                label="向右滑动地图",
                 x=x1,
                 y=y,
                 x2=x2,
                 y2=y,
                 message=(
-                    "南边已经能看到「浪人岬」。「前往克里斯汀」的金色旗帜还在左边，"
-                    "只露出右半截时不能点。手指从右向左划，让地图向右移，"
-                    "把「前」「往」和两侧箭头都拉进画面，整块对上再点，"
+                    "南边已经能看到「浪人岬」。「前往克里斯汀」还被切在左边缘，"
+                    "只露出右半截时不能点。手指从左向右滑，把左边的内容拉进画面，"
+                    "直到「前」「往」和两侧箭头整块对上再点，"
                     f"然后进入「{place.name}」。"
-                    f"第 {self.crystia_left_swipes}/{config.MAP_SWIPE_MAX} 次左划。"
-                    "不要点左下「离开」。"
+                    f"第 {self.crystia_reveal_swipes}/{config.MAP_SWIPE_MAX} 次向右滑动。"
+                    "不要点左下「离开」，也不要再往左推。"
                 ),
             )
             return StepResult(
@@ -384,7 +385,7 @@ class DailyCommissionTask(TaskBase):
                 message=action.message,
             )
         missing = (
-            f"已经看到「浪人岬」，并向左滑动 {config.MAP_SWIPE_MAX} 次，"
+            f"已经看到「浪人岬」，并手指从左向右滑动 {config.MAP_SWIPE_MAX} 次，"
             "仍然没有整块「前往克里斯汀」。不会点露出来的半截，也不会点左下「离开」。"
         )
         return StepResult(

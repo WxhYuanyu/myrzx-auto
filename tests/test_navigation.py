@@ -106,6 +106,27 @@ def test_unlisted_coastal_town_clicks_return_not_the_commission_board(templates)
     assert result.action.x is not None and 55 < result.action.x < 55 + tile.shape[1]
 
 
+def test_mine_with_leave_clicks_leave_before_the_continent(templates):
+    """结晶矿洞没有回程和大地图。还没看见大区标题时，左下「离开」就点。"""
+    by_id = templates_by_id(templates)
+    canvas = np.zeros((800, 700, 3), dtype=np.uint8)
+    tile = by_id["stage_leave"].image_bgr
+    _paste(canvas, tile, 16, 630)
+    task = DailyCommissionTask(specs=templates, recipe=get_recipe("受困的同伴"))
+    result = task.plan(canvas)
+    assert result.scene is Scene.UNKNOWN
+    assert result.status == "continue"
+    assert result.action is not None
+    assert result.action.kind == "click"
+    assert result.action.label == "离开"
+    assert result.action.label not in {"兑换", "战阵", "扫荡", "回程"}
+    text = f"{result.message} {result.action.message}"
+    assert "兑换" in text
+    assert "战阵" in text
+    assert "标题裁切" not in text
+    assert result.action.x is not None and result.action.x < canvas.shape[1] * 0.4
+
+
 def test_region_stage_title_clicks_return_home(templates):
     by_id = templates_by_id(templates)
     canvas = np.zeros((800, 700, 3), dtype=np.uint8)

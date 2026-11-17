@@ -3,7 +3,8 @@
 退回时先不管当前是不是目标城，直到看见「阿格莱恩」或「克里斯汀」：
 - 看到「回程」就点「回程」。不为「滨海小镇」这类地点做标题模板。
   不点「雨林之底→」「冥土之国→」「←深海之城」这类传送门，也不点关卡或「扫荡」。
-- 选关 / 副本准备页点左下「离开」，不点「扫荡」。
+- 看到左下「离开」就点它，不限于选关页（结晶矿洞这类页面也一样）。不点「扫荡」「兑换」「战阵」或矿层入口。
+  已经在阿格莱恩或克里斯汀大地图上时，不用「离开」换区。
 - 城里点「大地图」，不点本城的「协会」或「探险」。
 认不出退回按钮就停，不编造点击。
 
@@ -304,10 +305,27 @@ def _is_stage_prep(heading: Heading | None, clf: Any) -> bool:
 def _halt_unrecognized_exit(clf: Any) -> StepResult:
     missing = (
         "还没看见「阿格莱恩」或「克里斯汀」。"
-        "这一页没有「回程」，也不是选关页的「离开」或城里的「大地图」。"
+        "这一页没有「回程」，也没有左下「离开」或城里的「大地图」。"
         "认不出怎么退回，不会编造点击，也不会点传送门或「扫荡」。"
     )
     return _halt(clf, clf.scene, "认不出退回", missing)
+
+
+def _click_corner_leave(task: Any, image: np.ndarray, clf: Any) -> StepResult | None:
+    """还没回到大地图时，左下「离开」就点。不限选关页，也不点屏幕中部的按钮。"""
+    match = verbs.best_of(task, image, ("stage_leave", "association_leave"))
+    if match is None or match.label != "离开" or is_portal_text(match.label):
+        return None
+    x, y = task._click_point(match)
+    width, height = image.shape[1], image.shape[0]
+    sweep_y = int(round(height * 1750 / 1920))
+    if x > width * 0.4 or (y >= sweep_y and x > width * 0.3):
+        return None
+    message = (
+        "还没看见「阿格莱恩」或「克里斯汀」。点左下「离开」退回，不限于选关页。"
+        "不会点「扫荡」「兑换」「战阵」或矿层入口。"
+    )
+    return task._click_result(clf.scene, clf, list(clf.matches), match, message)
 
 
 def _return_until_continent(
@@ -328,6 +346,9 @@ def _return_until_continent(
         return backed
     if _is_stage_prep(heading, clf):
         return _leave_stage(task, image, clf)
+    left = _click_corner_leave(task, image, clf)
+    if left is not None:
+        return left
     city = _city_name(heading, clf)
     if city is not None or clf.scene in {Scene.CITY_LILITOS, Scene.CITY_TURANDON}:
         return task._plan_open_world_map(

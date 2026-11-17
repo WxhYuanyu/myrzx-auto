@@ -17,10 +17,11 @@ from src.tasks.recipes import (
     register_recipe,
 )
 from src.vision.classify import classify_scene
+from src.vision.image import load_bgr
 from src.vision.match import find_template
 from src.vision.templates import templates_by_id
 from src.vision.types import Scene
-from tests.conftest import TURN_IN_ORDER
+from tests.conftest import ROOT, TURN_IN_ORDER
 
 
 def _hatred(templates) -> DailyCommissionTask:
@@ -81,41 +82,50 @@ def test_turn_in_frames_classify(turn_in, templates):
         assert result.scene is scene, f"{name}: {result.reason}"
 
 
-def test_turn_in_leaves_aglaen_instead_of_entering_lilitos(walkthrough, templates):
+def test_turn_in_opens_crystia_tab_instead_of_entering_lilitos(walkthrough, templates):
     task = _hatred(templates)
     south = task.plan(walkthrough["wt_world_south"])
     assert south.action is not None
     assert south.action.kind == "click"
-    assert south.action.label == "离开"
-    assert south.action.x is not None and south.action.x < 300
-    assert south.action.y is not None and south.action.y > 1700
+    assert south.action.label == "前往克里斯汀"
+    assert south.action.x is not None and south.action.x < 450
+    assert south.action.y is not None and 1580 < south.action.y < 1720
+    assert south.action.label != "离开"
+    assert south.action.label != "王城莉莉托斯"
 
     task = _hatred(templates)
     city = task.plan(walkthrough["wt_world_lilitos"])
     assert city.action is not None
-    assert city.action.label == "离开"
+    assert city.action.kind == "swipe"
+    assert city.action.label == "向上滑动地图"
+    assert city.action.label != "离开"
     assert city.action.label != "王城莉莉托斯"
-    assert "阿格莱恩" in (city.action.message or "")
+    assert "前往克里斯汀" in (city.action.message or "")
 
 
-def test_turn_in_refuses_other_cards(walkthrough, templates):
+def test_turn_in_closes_lilitos_board(walkthrough, templates):
     task = _hatred(templates)
     result = task.plan(walkthrough["wt_commission_list"])
     assert result.scene is Scene.COMMISSION_LIST
-    assert result.status == "halt_missing"
     assert result.action is not None
-    assert result.action.kind == "halt"
-    assert "仇恨会令我成长" in result.message
+    assert result.action.kind == "click"
+    assert result.action.label == "返回"
+    assert "图兰顿沙漠" in (result.action.message or "")
     assert "扫荡" not in (result.action.label or "")
 
 
-def test_shared_board_and_receive_still_click_the_same_buttons(screens, templates):
-    """「委托」和「接收」是各条委托共用的按钮。"""
+def test_shared_board_and_receive_still_click_the_same_buttons(screens, walkthrough, templates):
+    """走错协会时离开；对的协会里「委托」，以及详情上的「接收」，仍是共用按钮。"""
     task = _hatred(templates)
-    board = task.plan(screens["association"])
+    wrong = task.plan(walkthrough["wt_association"])
+    assert wrong.action is not None
+    assert wrong.action.label == "离开"
+    assert task.phase is Phase.ACCEPT
+
+    type1 = DailyCommissionTask(specs=templates)
+    board = type1.plan(walkthrough["wt_association"])
     assert board.action is not None
     assert board.action.label == "委托"
-    assert task.phase is Phase.ACCEPT
 
     detail = task.plan(screens["quest_detail"])
     assert detail.action is not None
@@ -228,3 +238,73 @@ def test_turn_in_walk_never_sweeps_or_explores(turn_in, templates, walkthrough):
         assert action.label not in {"探险", "进入", "王城莉莉托斯"}
         if name == "story":
             assert "要塞" in (action.message or "") or "跳过剧情" == action.label
+
+
+def test_hatred_from_lilitos_city_opens_world_map(walkthrough, templates):
+    task = _hatred(templates)
+    result = task.plan(walkthrough["wt_city"])
+    assert result.action is not None
+    assert result.action.kind == "click"
+    assert result.action.label == "大地图"
+    assert result.action.label != "协会"
+
+
+def test_hatred_from_lilitos_association_leaves(walkthrough, templates):
+    task = _hatred(templates)
+    result = task.plan(walkthrough["wt_association"])
+    assert result.action is not None
+    assert result.action.label == "离开"
+    assert "图兰顿沙漠" in (result.action.message or "")
+
+
+def test_type1_from_lilitos_city_still_enters_association(walkthrough, templates):
+    task = DailyCommissionTask(specs=templates)
+    result = task.plan(walkthrough["wt_city"])
+    assert result.action is not None
+    assert result.action.label == "协会"
+
+
+def test_type1_from_crystia_clicks_aglaen_tab(turn_in, templates):
+    task = DailyCommissionTask(specs=templates)
+    result = task.plan(turn_in["region"])
+    assert result.action is not None
+    assert result.action.kind == "click"
+    assert result.action.label == "返阿格莱恩"
+    assert result.action.label != "图兰顿沙漠"
+    assert result.action.label != "离开"
+
+
+def test_hatred_card_matches_either_slot(turn_in, templates):
+    """委托在面板上的格子不固定，要点标题，不能写死左下或右下。"""
+    by_id = templates_by_id(templates)
+    spec = by_id["commission_hatred_growth"]
+    left = turn_in["commission"]
+    right = load_bgr(ROOT / "tests/fixtures/nav/turandon_board_right.png")
+    m_left = find_template(left, spec)
+    m_right = find_template(right, spec)
+    assert m_left is not None and m_left.score >= 0.9
+    assert m_right is not None and m_right.score >= 0.9
+    assert m_left.box.center[0] < 500
+    assert m_right.box.center[0] > 700
+
+    left_plan = _hatred(templates).plan(left)
+    right_plan = _hatred(templates).plan(right)
+    assert left_plan.action is not None and left_plan.action.label == "仇恨会令我成长"
+    assert right_plan.action is not None and right_plan.action.label == "仇恨会令我成长"
+    assert left_plan.action.x is not None and left_plan.action.x < 500
+    assert right_plan.action.x is not None and right_plan.action.x > 700
+
+
+def test_closes_list_after_accept_on_live_board(templates):
+    """接取后列表右上的返回周围是协会背景，只能按箭头本身来点，不能空等。"""
+    image = load_bgr(ROOT / "tests/fixtures/nav/turandon_list_after_accept.png")
+    task = _hatred(templates)
+    task.phase = Phase.GO_STAGE
+    result = task.plan(image)
+    assert result.action is not None
+    assert result.action.kind == "click"
+    assert result.action.label == "返回"
+    assert result.action.x is not None and result.action.x > 900
+    assert result.action.y is not None and 400 < result.action.y < 600
+    assert result.status == "continue"
+

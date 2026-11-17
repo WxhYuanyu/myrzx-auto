@@ -125,3 +125,23 @@ MULTI_BATTLE_COMMISSION = "“热情”的冒险者"
 MULTI_BATTLE_OBJECTIVE = "击杀30只萨克毒蝎后与图兰顿要塞的冒险者对话"
 MULTI_BATTLE_FIGHTS = 3
 MULTI_BATTLE_STAGE = "9-7"
+
+# ---------------------------------------------------------------------------
+# ADB（--live 默认用这个截图和点击）
+# ---------------------------------------------------------------------------
+# 窗口消息经常到不了 MuMu 里的游戏，所以实机循环走 adb screencap / input tap。
+# 坐标按 1080×1920 的设备画面，和实走截图一致。
+ADB_PATH = r"D:\Program Files\Netease\MuMu Player 12\nx_main\adb.exe"
+ADB_CANDIDATE_PATHS = (
+    r"D:\Program Files\Netease\MuMu Player 12\nx_main\adb.exe",
+    r"C:\Program Files\Netease\MuMu Player 12\nx_main\adb.exe",
+)
+ADB_SERIAL = "127.0.0.1:16384"
+ADB_SERIAL_FALLBACKS = ("127.0.0.1:5555", "127.0.0.1:7555")
+ADB_SCREENCAP_REMOTE = "/sdcard/myrzx_screencap.png"
+
+# 实机循环：整体时限、同一点击重复次数、识别失败后的重试次数。
+LIVE_TIMEOUT_SEC = 900.0
+LIVE_STUCK_LIMIT = 4
+LIVE_UNKNOWN_RETRY = 5
+

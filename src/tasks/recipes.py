@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from enum import Enum
 
 from src import config
+from src.tasks.locations import LILITOS, MapPlace, TURANDON
 from src.vision.types import Scene
 
 
@@ -32,6 +33,7 @@ class CommissionRecipe:
     objective_template: str | None
     npc_template: str | None
     objective_text: str
+    location: MapPlace | None = None
     stage_flag_template: str | None = None
     region_banner_template: str | None = None
     city_label_template: str | None = None
@@ -51,6 +53,7 @@ ZHAZHA_BULIN = CommissionRecipe(
     objective_template="quest_accepted_obj",
     npc_template="npc_child",
     objective_text="消灭 莉莉托斯郊外 1-3 的入侵的喳喳布林",
+    location=LILITOS,
     stage_flag_template="stage_flag_1_3",
     city_scene=Scene.CITY_LILITOS,
 )
@@ -64,9 +67,11 @@ HATRED_GROWTH = CommissionRecipe(
     objective_template="quest_accepted_relic",
     npc_template="npc_adventurer",
     objective_text=config.TURN_IN_OBJECTIVE,
+    location=TURANDON,
     region_banner_template="world_crystia",
     city_label_template="region_turandon",
     city_scene=Scene.CITY_TURANDON,
+    region_switch="tab",
 )
 
 # 图兰顿沙漠协会的紫色紧急委托。只打 9-7 的「初步探索」三场。
@@ -79,6 +84,7 @@ EAGER_ADVENTURER = CommissionRecipe(
     objective_template="quest_accepted_scorpion",
     npc_template="npc_eager_adventurer",
     objective_text=config.MULTI_BATTLE_OBJECTIVE,
+    location=TURANDON,
     stage_flag_template="stage_flag_9_7",
     region_banner_template="world_crystia",
     city_label_template="region_turandon",

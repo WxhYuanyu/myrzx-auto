@@ -19,8 +19,11 @@ if str(_ROOT) not in sys.path:
 
 from src import config  # noqa: E402
 from src.tasks.daily_commission import DailyCommissionTask  # noqa: E402
+from src.tasks.phase import Phase  # noqa: E402
 from src.tasks.recipes import CommissionKind, get_recipe  # noqa: E402
 from src.vision.image import load_bgr  # noqa: E402
+from src.adb_io import AdbClicker, AdbError, AdbFrameSource, connect_adb  # noqa: E402
+from src.live import run_live  # noqa: E402
 from src.window import (  # noqa: E402
     WindowError,
     find_game_window,
@@ -62,7 +65,7 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_list_windows()
 
     if args.live:
-        return _cmd_live()
+        return _cmd_live(args.quest, start_phase=args.phase)
 
     # 默认 dry-run
     path = Path(args.dry_run) if args.dry_run else config.DEFAULT_FIXTURE_DIR
@@ -92,13 +95,19 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--live",
         action="store_true",
-        help="（默认关闭）在 Windows 上对模拟器窗口执行真实点击。Linux 上会被拒绝。",
+        help="（默认关闭）通过 MuMu 的 ADB 截图并真实点击。请同时用 --quest 指定委托。",
     )
     parser.add_argument(
         "--quest",
         default=config.PRIORITY_COMMISSION,
         help="委托标题。默认「喳喳布林入侵」。交物品：「仇恨会令我成长」。"
         "多场战斗：「“热情”的冒险者」。未知名称会直接停止，不会编造路线。",
+    )
+    parser.add_argument(
+        "--phase",
+        default=None,
+        metavar="NAME",
+        help="从指定阶段接着跑。例如已经接取委托后，用 GO_STAGE 关闭列表并继续交物品或去战斗。",
     )
     parser.add_argument(
         "--verbose",
@@ -219,29 +228,41 @@ def _cmd_dry_run(path: Path, quest_name: str) -> int:
     return 0
 
 
-def _cmd_live() -> int:
-    if not is_windows():
-        print(
-            f"错误：--live 只在 Windows 上可用（当前是 {sys.platform}）。"
-            "请先用 python main.py --dry-run 查看识别结果。"
-        )
+def _cmd_live(quest_name: str, start_phase: str | None = None) -> int:
+    try:
+        recipe = get_recipe(quest_name)
+    except KeyError as exc:
+        print(str(exc))
         return 2
 
     try:
-        found = find_game_window()
-    except WindowError as exc:
-        print(f"未能找到游戏窗口: {exc}")
+        device = connect_adb()
+    except AdbError as exc:
+        print(f"未能连接模拟器 ADB: {exc}")
         return 1
 
-    print("已找到窗口，但 --live 的完整循环还需要先确认渲染子窗口截图可用，")
-    print("并且用 --list-windows 核对这台机器上的精确标题和类名。")
-    print("顶层: " + found.top_level.brief())
-    print("目标: " + found.target.brief())
+    task = DailyCommissionTask(recipe=recipe)
+    if start_phase:
+        try:
+            task.phase = Phase(start_phase)
+        except ValueError:
+            names = ", ".join(item.value for item in Phase)
+            print(f"未知阶段「{start_phase}」，可选：{names}")
+            return 2
+    source = AdbFrameSource(device)
+    clicker = AdbClicker(device)
+    summary = _summary_for(quest_name)
+    print(f"--live：ADB {device.serial} 截图并点击，任务「{recipe.name}」。")
+    print(f"任务: {summary}")
+    if start_phase:
+        print(f"从阶段 {task.phase.value} 继续。")
+    print("从当前画面开始跑完全程。请不要手动点击。任何阶段都不会点「扫荡」。")
     print()
-    print("状态机已覆盖「喳喳布林入侵」、交物品「仇恨会令我成长」和多场战斗「“热情”的冒险者」。")
-    print("请先运行 python main.py --list-windows，以及 --dry-run 验证识别。")
-    print("确认窗口后再把真实点击循环接上。未收录的中间页会跳过，不会点「扫荡」。")
-    return 0
+
+    result = run_live(task, source.grab, clicker, log=print)
+    print()
+    print(result.message)
+    return 0 if result.status == "done" else 1
 
 
 def _collect_images(path: Path) -> list[Path]:

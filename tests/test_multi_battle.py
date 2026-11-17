@@ -75,7 +75,8 @@ def test_region_tab_is_not_leave(walkthrough, templates):
     task = _eager(templates)
     opened = task.plan(walkthrough["wt_world_lilitos"])
     assert opened.action is not None
-    assert opened.action.kind == "halt"
+    assert opened.action.kind == "swipe"
+    assert opened.action.label == "向上滑动地图"
     assert opened.action.label != "离开"
     assert opened.action.label != "王城莉莉托斯"
 

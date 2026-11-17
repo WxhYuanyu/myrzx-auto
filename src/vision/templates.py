@@ -45,6 +45,10 @@ def load_manifest(path: Path | None = None) -> dict:
 def _scene_from(value: str | None) -> Scene | None:
     if not value:
         return None
+    # 城里「探险」木牌和背包按钮在清单里标成通用 CITY。
+    # 它们的 role 是 click_only，不参与页面判断；Scene 没有这一项。
+    if value == "CITY":
+        return None
     return Scene(value)
 
 

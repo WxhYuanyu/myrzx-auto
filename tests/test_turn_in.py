@@ -54,6 +54,11 @@ def test_unknown_commission_is_refused_without_a_fake_stage():
         "阻碍道路的家伙",
         "受困的同伴",
         "请让他们安息",
+        "换换口味",
+        "制作药物",
+        "冒险小队寻求支援",
+        "保护维修工",
+        "保证商路畅通",
     }
     with pytest.raises(KeyError, match="尚未收录"):
         get_recipe("没有这条委托")

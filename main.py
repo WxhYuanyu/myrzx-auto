@@ -19,9 +19,10 @@ if str(_ROOT) not in sys.path:
 
 from src import config  # noqa: E402
 from src.tasks.claim_dailies import ClaimDailiesTask  # noqa: E402
-from src.tasks.daily_commission import DailyCommissionTask  # noqa: E402
 from src.tasks.shop_buy import ShopBuyTask  # noqa: E402
+from src.tasks.daily_commission import DailyCommissionTask  # noqa: E402
 from src.tasks.phase import Phase  # noqa: E402
+from src.tasks.daily_sweep import SweepState, first_recipe_for_sweep, sweep_plan_text  # noqa: E402
 from src.tasks.recipes import CommissionKind, get_recipe  # noqa: E402
 from src.vision.image import load_bgr  # noqa: E402
 from src.adb_io import AdbClicker, AdbError, AdbFrameSource, connect_adb  # noqa: E402
@@ -66,32 +67,40 @@ def main(argv: list[str] | None = None) -> int:
     if args.list_windows:
         return _cmd_list_windows()
 
+    if args.list_quests:
+        print(sweep_plan_text(), end="")
+        return 0
     if args.claim and args.shop:
-        print("--claim 和 --shop 不能同时使用。")
-        return 2
-    if args.live and args.shop:
-        return _cmd_shop()
-    if args.shop:
-        print("金币商店购买需要同时加上 --live。")
+        print("不能同时使用 --claim 和 --shop。")
         return 2
     if args.live and args.claim:
         return _cmd_claim()
     if args.claim:
         print("一起领取已完成的每日委托需要同时加上 --live。")
         return 2
+    if args.live and args.shop:
+        return _cmd_shop()
+    if args.shop:
+        print("购买金币商店的目标商品需要同时加上 --live。")
+        return 2
     if args.live:
         return _cmd_live(args.quest, start_phase=args.phase)
 
+    if args.quest is None and not args.dry_run:
+        print(sweep_plan_text(), end="")
+        return 0
+
     # 默认 dry-run
     path = Path(args.dry_run) if args.dry_run else config.DEFAULT_FIXTURE_DIR
-    return _cmd_dry_run(path, args.quest)
+    quest = args.quest if args.quest is not None else config.PRIORITY_COMMISSION
+    return _cmd_dry_run(path, quest)
 
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
-            "牧羊人之心日常自动化（每日委托：类型1「喳喳布林入侵」，"
-            "类型2「仇恨会令我成长」，类型3「“热情”的冒险者」）"
+            "牧羊人之心日常自动化。每日委托按高 / 中 / 低三档，"
+            "从图1起一个地区一个地区先做完高级，再从头扫中级，最后扫低级。"
         ),
     )
     parser.add_argument(
@@ -110,7 +119,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--live",
         action="store_true",
-        help="（默认关闭）通过 MuMu 的 ADB 截图并真实点击。请同时用 --quest 指定委托。",
+        help="（默认关闭）通过 MuMu 的 ADB 截图并真实点击。不写 --quest 时按高 / 中 / 低扫城。",
     )
     parser.add_argument(
         "--claim",
@@ -121,15 +130,23 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--shop",
         action="store_true",
-        help="在任意一座城打开「商店」，点右下「金币」，把「可疑的果汁」和「魔铁矿」买空。"
-        "必须与 --live 一起使用，不能与 --claim 同时使用。",
+        help="在任意一座城打开「商店」，点右下「金币」，把目标商品买空"
+        "（目前是可疑的果汁、魔铁矿）。买空是指可购数量变为 0/n"
+        "（不一定是 0/2，只有 1 份就是 0/1）或「购买」变灰。"
+        "清单里没有的就跳过。必须与 --live 一起使用。"
+        "不会点「购买全部」「兑换」「时装」「氪金」。",
+    )
+    parser.add_argument(
+        "--list-quests",
+        action="store_true",
+        help="打印高 / 中 / 低三档的扫城顺序，不截图也不点击。",
     )
     parser.add_argument(
         "--quest",
-        default=config.PRIORITY_COMMISSION,
-        help="委托标题。默认「喳喳布林入侵」。交物品：「仇恨会令我成长」。"
-        "多场战斗：「“热情”的冒险者」。"
-        "另有：处理毒桶、讨伐食人花、温泉治疗、奇怪的魔物、阻碍道路的家伙、受困的同伴、请让他们安息。"
+        default=None,
+        help="只做这一条委托的标题。不写时，--live 会按高 / 中 / 低从图1起扫城。"
+        "「保证商路畅通」有两条，请写成「保证商路畅通」并再确认地点；"
+        "表里的「仇恨令我成长」「热情的冒险者」也会认成游戏标题。"
         "未知名称会直接停止，不会编造路线。",
     )
     parser.add_argument(
@@ -259,9 +276,10 @@ def _cmd_dry_run(path: Path, quest_name: str) -> int:
     return 0
 
 
-def _cmd_live(quest_name: str, start_phase: str | None = None) -> int:
+def _cmd_live(quest_name: str | None, start_phase: str | None = None) -> int:
+    auto_sweep = not quest_name
     try:
-        recipe = get_recipe(quest_name)
+        recipe = first_recipe_for_sweep() if auto_sweep else get_recipe(quest_name)
     except KeyError as exc:
         print(str(exc))
         return 2
@@ -273,6 +291,10 @@ def _cmd_live(quest_name: str, start_phase: str | None = None) -> int:
         return 1
 
     task = DailyCommissionTask(recipe=recipe)
+    if auto_sweep:
+        task.auto_sweep = True
+        task.sweep = SweepState.start()
+        task.recipe = task.sweep.travel_recipe()
     if start_phase:
         try:
             task.phase = Phase(start_phase)
@@ -282,9 +304,14 @@ def _cmd_live(quest_name: str, start_phase: str | None = None) -> int:
             return 2
     source = AdbFrameSource(device)
     clicker = AdbClicker(device)
-    summary = _summary_for(quest_name)
-    print(f"--live：ADB {device.serial} 截图并点击，任务「{recipe.name}」。")
-    print(f"任务: {summary}")
+    if auto_sweep:
+        summary = "按高 / 中 / 低三档扫城。单条做完先不点「完成」。"
+        print(f"--live：ADB {device.serial} 截图并点击，按高 / 中 / 低从图1起扫城。")
+        print(sweep_plan_text(), end="")
+    else:
+        summary = _summary_for(quest_name)
+        print(f"--live：ADB {device.serial} 截图并点击，任务「{recipe.name}」。")
+        print(f"任务: {summary}")
     if start_phase:
         print(f"从阶段 {task.phase.value} 继续。")
     print("从当前画面开始跑完全程。请不要手动点击。任何阶段都不会点「扫荡」。")
@@ -326,10 +353,10 @@ def _cmd_shop() -> int:
     task = ShopBuyTask()
     source = AdbFrameSource(device)
     clicker = AdbClicker(device)
-    print(f"--live --shop：ADB {device.serial}，在任意一座城把金币商店目标买空。")
-    print("点城里地图上的「商店」，再点右下「金币」。只点与目标同一行的「购买」。")
-    print("确认弹窗里的商品名对上才点「是」，对不上点「否」。")
-    print("不会点「购买全部」「兑换」「时装」「氪金」「完成」或「扫荡」。")
+    print(f"--live --shop：ADB {device.serial}，在任意一座城打开「商店」购买目标商品。")
+    print("所有地区都是同一家商店。会点右下「金币」，拖动清单找到商品后点同一行的「购买」。")
+    print("确认弹窗里的商品名对得上才点「是」，一直买到可购数量为 0 或「购买」变灰。")
+    print("不会点「购买全部」「兑换」「时装」「氪金」。清单里没有的商品会跳过并说明。")
     print()
     result = run_live(task, source.grab, clicker, log=print)
     print()

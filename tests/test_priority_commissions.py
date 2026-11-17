@@ -61,22 +61,28 @@ def test_place_names_use_the_atlas_spelling():
     assert trapped.unmapped_place is None
 
 
-def test_poison_and_man_eater_share_the_reenter_flow_but_not_the_stage():
+def test_poison_and_man_eater_reenter_the_association_then_split():
     poison = get_recipe("处理毒桶")
     flower = get_recipe("讨伐食人花")
-    assert poison.flow == flower.flow == "lianhu_reenter_dashu"
-    assert poison.steps == flower.steps
-    assert poison.steps.index("leave_association") < poison.steps.index("reenter_association")
-    assert poison.steps.index("reenter_association") < poison.steps.index("talk_dashu")
+    assert poison.flow == "lianhu_poison_barrel"
+    assert flower.flow == "lianhu_man_eater"
+    assert poison.steps != flower.steps
+    for recipe in (poison, flower):
+        assert recipe.steps.index("leave_association") < recipe.steps.index("reenter_association")
+        assert recipe.steps.index("reenter_association") < recipe.steps.index("talk_dashu")
     assert poison.stage_label == "2-9"
     assert poison.stage_node is None
+    assert "talk_youth" in poison.steps
     assert flower.stage_label == "2-20-1"
     assert flower.stage_node == "basic"
+    assert "enter_basic_starts_battle" in flower.steps
     assert poison.npc_template == flower.npc_template == "npc_xiehui_dashu"
     assert "npc_dashu_card_dutong" in poison.npc_templates
     assert "npc_dashu_card_shire" in flower.npc_templates
-    assert "stage_flag_2_9" in poison.awaiting_crops
-    assert "stage_flag_2_20" in flower.awaiting_crops
+    assert poison.stage_flag_template == "stage_flag_2_9"
+    assert flower.stage_flag_template == "stage_flag_2_20"
+    assert "stage_flag_2_9" not in poison.awaiting_crops
+    assert "stage_flag_2_20" not in flower.awaiting_crops
 
 
 def test_strange_beast_returns_to_3_20_and_does_not_use_the_card_knight():
@@ -90,7 +96,9 @@ def test_strange_beast_returns_to_3_20_and_does_not_use_the_card_knight():
     assert recipe.npc_template == "npc_qingnian"
     assert recipe.stage_label == "3-23-2"
     assert recipe.stage_node == "deep"
-    assert "stage_flag_3_23" in recipe.awaiting_crops
+    assert recipe.stage_flag_template == "stage_flag_3_23"
+    assert "stage_flag_3_23" not in recipe.awaiting_crops
+    assert "leave_stage" in steps
 
 
 def test_lianhu_opening_clicks_the_atlas_label_not_the_capital(walkthrough, templates):
@@ -189,8 +197,10 @@ def test_youth_and_3_20_crops_are_clicked_and_3_23_does_not_reuse_3_20(templates
     assert fight.status == "halt_missing"
     assert fight.action is not None
     assert fight.action.kind == "halt"
-    assert "3-23-2" in fight.message
+    assert "3-23" in fight.message
     assert "3-20" in fight.message
+    assert "扫荡" in fight.message
+    assert fight.action.label != "3-20"
 
     back = _at(_task(templates, "奇怪的魔物"), "return_3_20").plan(node)
     assert back.action is not None
@@ -207,17 +217,20 @@ def test_enter_3_20_does_not_click_flag_1_3(walkthrough, templates):
 
 
 def test_stage_flags_that_are_not_cropped_halt(walkthrough, templates):
+    # 2-9 / 2-20 的旗帜已经有裁切。1-x 图上看不见时先平移，不改点 1-3。
     poison = _at(_task(templates, "处理毒桶"), "fight_stage").plan(walkthrough["wt_stage_map"])
-    assert poison.status == "halt_missing"
-    assert poison.action is not None and poison.action.kind == "halt"
+    assert poison.status == "continue"
+    assert poison.action is not None and poison.action.kind == "swipe"
     assert "2-9" in poison.message
-    assert "初步" in poison.message
+    assert "扫荡" in poison.message
     assert poison.action.label != "1-3"
 
     flower = _at(_task(templates, "讨伐食人花"), "fight_stage").plan(walkthrough["wt_stage_map"])
-    assert flower.status == "halt_missing"
+    assert flower.status == "continue"
+    assert flower.action is not None and flower.action.kind == "swipe"
     assert "2-20-1" in flower.message
-    assert "初步探索" in flower.message
+    assert "扫荡" in flower.message
+    assert flower.action.label != "1-3"
 
     spring = _at(_task(templates, "温泉治疗"), "talk_on_stage").plan(
         np.zeros((200, 200, 3), dtype=np.uint8)

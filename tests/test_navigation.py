@@ -230,6 +230,35 @@ def test_aglaen_top_does_not_assume_crystia_tab_is_visible(walkthrough, template
     assert south.action.label != "离开"
 
 
+def test_langren_visible_but_cut_off_banner_swipes_left(walkthrough, templates):
+    """南边已有「浪人岬」，「前往克里斯汀」被切在左边时先向左划，不点半截，也不点「离开」。"""
+    image = walkthrough["wt_world_south"].copy()
+    image[1560:1720, 0:480] = (32, 48, 32)
+    task = DailyCommissionTask(specs=templates, recipe=get_recipe("受困的同伴"))
+    result = task.plan(image)
+    assert result.status == "continue"
+    assert result.action is not None
+    assert result.action.kind == "swipe"
+    assert result.action.label == "向左滑动地图"
+    assert result.action.x is not None and result.action.x2 is not None
+    assert result.action.x2 < result.action.x
+    assert result.action.y == result.action.y2
+    assert "浪人岬" in (result.action.message or "")
+    assert "前往克里斯汀" in (result.action.message or "")
+    assert "离开" in (result.action.message or "")
+    assert result.action.label != "离开"
+    assert result.action.label != "向上滑动地图"
+
+    task.crystia_left_swipes = 4
+    halted = task.plan(image)
+    assert halted.status == "halt_missing"
+    assert halted.action is not None
+    assert halted.action.kind == "halt"
+    assert halted.action.x is None
+    assert halted.action.label != "离开"
+    assert "离开" in halted.message
+
+
 def test_crystia_returns_by_the_corner_tab_not_leave(turn_in, templates):
     task = DailyCommissionTask(specs=templates, recipe=get_recipe("喳喳布林入侵"))
     result = task.plan(turn_in["region"])

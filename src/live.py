@@ -46,7 +46,7 @@ def run_live(
     """按当前画面一路执行到完成、停住或超时。
 
     从世界地图、区域地图、城镇或协会都能起步；认不出的中间页先等，
-    不会点「扫荡」，战斗中只等待。
+    不会点「扫荡」。战斗中只在出现「跳过剧情」时点击，其余时间等待。
     """
     timeout_sec = config.LIVE_TIMEOUT_SEC if timeout_sec is None else timeout_sec
     emit = log or (lambda _line: None)

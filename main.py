@@ -101,7 +101,9 @@ def _build_parser() -> argparse.ArgumentParser:
         "--quest",
         default=config.PRIORITY_COMMISSION,
         help="委托标题。默认「喳喳布林入侵」。交物品：「仇恨会令我成长」。"
-        "多场战斗：「“热情”的冒险者」。未知名称会直接停止，不会编造路线。",
+        "多场战斗：「“热情”的冒险者」。"
+        "另有：处理毒桶、讨伐食人花、温泉治疗、奇怪的魔物、阻碍道路的家伙、受困的同伴、请让他们安息。"
+        "未知名称会直接停止，不会编造路线。",
     )
     parser.add_argument(
         "--phase",
@@ -165,6 +167,8 @@ def _cmd_list_windows() -> int:
 
 def _summary_for(quest_name: str) -> str:
     recipe = get_recipe(quest_name)
+    if recipe.summary:
+        return recipe.summary
     if recipe.kind is CommissionKind.TURN_IN:
         return _TURN_IN_SUMMARY
     if recipe.kind is CommissionKind.MULTI_BATTLE:

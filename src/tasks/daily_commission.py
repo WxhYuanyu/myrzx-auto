@@ -6,7 +6,7 @@
   → 用卡片右上返回关闭详情和列表（等关窗动画）→ 协会「离开」
   → 城内右下「探险」→ 关卡图点带「1-3」字样的旗帜
   → 点左下角小孩头像（不要点边缘气泡）→ 右上「跳过剧情」，直接进入战斗
-  → 战斗中不操作，等到「战斗胜利」再点「触摸继续」
+  → 战斗中不操作；只有中途出现「跳过剧情」才点右上角。等到「战斗胜利」再点「触摸继续」
   → 若有战后剧情再跳过 → 回到 1-3 后点右上带绿勾的任务卷轴
   → 在任务日志点该委托标题打开详情 → 点详情中下部「完成」
   → 在「获得物品」上点「触摸继续」。
@@ -44,6 +44,7 @@ from src import config
 from src.tasks.base import PlannedAction, StepResult, TaskBase
 from src.tasks.phase import Phase
 from src.tasks.locations import scale_point
+from src.tasks.priority_flows import plan_priority
 from src.tasks.recipes import CommissionKind, CommissionRecipe, ZHAZHA_BULIN
 from src.tasks import verbs
 from src.vision.bubble import find_explore_nodes, select_node_by_bubble
@@ -112,6 +113,9 @@ class DailyCommissionTask(TaskBase):
         self.fights_done = 0
         self.victory_counted = False
         self.loot_kind: str | None = None
+        self.step_index = 0
+        self.step_armed = False
+        self.node_selected = False
         self._match_cache: dict[str, Match | None] = {}
 
     def plan(self, image_bgr: np.ndarray) -> StepResult:
@@ -149,6 +153,8 @@ class DailyCommissionTask(TaskBase):
             )
         if scene in {Scene.WORLD_MAP, Scene.REGION_CRYSTIA}:
             return self._plan_region_to_place(image_bgr, classification)
+        if self.recipe.flow:
+            return plan_priority(self, image_bgr, classification)
         if scene in {Scene.CITY_LILITOS, Scene.CITY_TURANDON}:
             place = self._place()
             if place and place.city_scene is not None and scene is not place.city_scene:
@@ -224,6 +230,20 @@ class DailyCommissionTask(TaskBase):
         self, image_bgr: np.ndarray, clf: Classification
     ) -> StepResult:
         """在区域地图上走到配方记录的那座城。先认左上角横幅，再点记录的地名。"""
+        unmapped = self.recipe.unmapped_place
+        if unmapped:
+            missing = (
+                f"「{self.recipe.name}」在「{unmapped}」。这片区域还不在地图册里，"
+                "没有地名模板，也不会编造地图坐标或城市点击。补上图谱之后再走。"
+            )
+            return StepResult(
+                scene=clf.scene,
+                reason=clf.reason,
+                matches=list(clf.matches),
+                action=PlannedAction(kind="halt", label="区域不在地图册", message=missing),
+                status="halt_missing",
+                message=missing,
+            )
         place = self._place()
         if place is None:
             if clf.scene is Scene.WORLD_MAP:
@@ -1095,6 +1115,15 @@ class DailyCommissionTask(TaskBase):
         if self.battle_started_at is None:
             self.battle_started_at = now
         elapsed = now - self.battle_started_at
+        skip = verbs.best_of(self, image_bgr, ("skip_story", "skip_story_tight"))
+        if skip is not None:
+            return self._click_result(
+                Scene.BATTLE,
+                clf,
+                _merge_match(list(clf.matches), skip),
+                skip,
+                "战斗中出现剧情，点击右上「跳过剧情」。除此之外不点击，也不点「扫荡」。",
+            )
         if elapsed >= config.BATTLE_TIMEOUT_SEC:
             return StepResult(
                 scene=Scene.BATTLE,

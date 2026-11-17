@@ -47,6 +47,13 @@ def test_unknown_commission_is_refused_without_a_fake_stage():
         "喳喳布林入侵",
         "仇恨会令我成长",
         "“热情”的冒险者",
+        "处理毒桶",
+        "讨伐食人花",
+        "温泉治疗",
+        "奇怪的魔物",
+        "阻碍道路的家伙",
+        "受困的同伴",
+        "请让他们安息",
     }
     with pytest.raises(KeyError, match="尚未收录"):
         get_recipe("没有这条委托")

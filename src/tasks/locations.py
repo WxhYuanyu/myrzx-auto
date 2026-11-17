@@ -230,6 +230,9 @@ PLACES: tuple[MapPlace, ...] = (
 PLACES_BY_ID: dict[str, MapPlace] = {place.id: place for place in PLACES}
 PLACES_BY_NAME: dict[str, MapPlace] = {place.name: place for place in PLACES}
 
+# 利特利尔大区还不在这张表里。「受困的同伴」因此停住。
+# 不要补一个没有实走截图的坐标或城市点击。
+
 
 def places_in(region: Region) -> tuple[MapPlace, ...]:
     """某一片区域地图上已经记录的地点，按图谱顺序。"""

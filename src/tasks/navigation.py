@@ -4,8 +4,9 @@
 否则用调用方提供的标题读取（OCR）。认不出就不点。
 
 退回（一次只走一步，直到看见阿格莱恩或克里斯汀）：
-- 嵌套区域（标题如「雨林之底」）点「回程」，回到上一级「…地区」。
-  不点「雨林之底→」「冥土之国→」「←深海之城」这类传送门。
+- 嵌套区域点「回程」，回到上一级「…地区」。标题读得出（如「雨林之底」）
+  或读不出（如「滨海小镇」）都一样：画面上有「回程」就点它，不为每个地点做标题模板。
+  不点「雨林之底→」「冥土之国→」「←深海之城」这类传送门，也不点关卡或「扫荡」。
 - 标题以「地区」结尾（如「纳尔本地区」）点「回程」回城。
 - 选关 / 副本准备页点左下「离开」，不点「扫荡」。
 - 城内标题是城市名（不是「…地区」）时，目标若不是这座城，点「大地图」。
@@ -246,6 +247,23 @@ def click_return(task: Any, image: np.ndarray, clf: Any, heading: Heading) -> St
     return task._click_result(scene, clf, list(clf.matches), match, message)
 
 
+def click_unlisted_return(task: Any, image: np.ndarray, clf: Any) -> StepResult | None:
+    """还没到目标城时，未录入的嵌套地图只要有「回程」就点。
+
+    「滨海小镇」这类地点不单独做标题模板。匹配的是按钮本身，不是传送门或「扫荡」。
+    """
+    match = task._require(image, "stage_return")
+    if match is None or match.label != "回程" or is_portal_text(match.label):
+        return None
+    message = (
+        "还没到目标城，这一页也不是大区地图或委托界面。"
+        "画面上有「回程」，点它退回上一级。不依赖具体地点的标题模板。"
+        + _portal_sentence()
+        + "也不会点关卡或「扫荡」。"
+    )
+    return task._click_result(clf.scene, clf, list(clf.matches), match, message)
+
+
 def _target(task: Any) -> MapPlace | None:
     return getattr(task.recipe, "location", None)
 
@@ -283,26 +301,33 @@ def step(task: Any, image: np.ndarray, clf: Any) -> StepResult | None:
     if on_continent:
         return task._plan_region_to_place(image, clf)
 
-    if task.phase is not Phase.ACCEPT:
+    in_quest_stage = clf.scene in _PREP_SCENES or clf.scene is Scene.STAGE_DESERT
+    if task.phase is Phase.ACCEPT:
+        if heading is not None and heading.kind in {"region_stage", "nested"}:
+            return click_return(task, image, clf, heading)
+        if clf.scene is Scene.STAGE_DESERT:
+            return click_return(
+                task,
+                image,
+                clf,
+                Heading("图兰顿沙漠地区", "", "region_stage"),
+            )
+        if (heading is not None and heading.kind == "stage_prep") or clf.scene in _PREP_SCENES:
+            return verbs.leave_stage_select(
+                task,
+                image,
+                clf,
+                clf.scene,
+                "选关或副本准备页点左下「离开」。不会点「扫荡」。",
+            )
+        # 标题还没录入（滨海小镇等）时也要退回，不能把这一页交给委托板。
+        unlisted = click_unlisted_return(task, image, clf)
+        if unlisted is not None:
+            return unlisted
         return None
-    if heading is not None and heading.kind in {"region_stage", "nested"}:
-        return click_return(task, image, clf, heading)
-    if clf.scene is Scene.STAGE_DESERT:
-        return click_return(
-            task,
-            image,
-            clf,
-            Heading("图兰顿沙漠地区", "", "region_stage"),
-        )
-    if (heading is not None and heading.kind == "stage_prep") or clf.scene in _PREP_SCENES:
-        return verbs.leave_stage_select(
-            task,
-            image,
-            clf,
-            clf.scene,
-            "选关或副本准备页点左下「离开」。不会点「扫荡」。",
-        )
-    return None
+    if in_quest_stage:
+        return None
+    return click_unlisted_return(task, image, clf)
 
 
 def _usable_ocr(task: Any) -> bool:

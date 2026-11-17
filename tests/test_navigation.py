@@ -83,6 +83,29 @@ def test_nested_area_clicks_return_and_not_a_portal(templates):
     assert result.action.x is not None and 40 < result.action.x < 40 + tile.shape[1]
 
 
+def test_unlisted_coastal_town_clicks_return_not_the_commission_board(templates):
+    """滨海小镇没有标题模板。有「回程」就要点，不能停成委托标题还没裁切。"""
+    by_id = templates_by_id(templates)
+    canvas = np.zeros((1920, 1080, 3), dtype=np.uint8)
+    tile = by_id["stage_return"].image_bgr
+    _paste(canvas, tile, 55, 1800)
+    task = DailyCommissionTask(specs=templates, recipe=get_recipe("受困的同伴"))
+    result = task.plan(canvas)
+    assert result.scene is Scene.UNKNOWN
+    assert result.status == "continue"
+    assert result.action is not None
+    assert result.action.kind == "click"
+    assert result.action.label == "回程"
+    assert result.action.label != "扫荡"
+    text = f"{result.message} {result.action.message}"
+    assert "标题裁切" not in text
+    assert "委托板" not in text
+    assert "传送门" in (result.action.message or "")
+    for portal in PORTAL_EXAMPLES:
+        assert portal not in (result.action.label or "")
+    assert result.action.x is not None and 55 < result.action.x < 55 + tile.shape[1]
+
+
 def test_region_stage_title_clicks_return_home(templates):
     by_id = templates_by_id(templates)
     canvas = np.zeros((800, 700, 3), dtype=np.uint8)

@@ -26,7 +26,7 @@ from src.vision.types import Box, Match, Scene
 
 logger = logging.getLogger("myrzx.task.shop_buy")
 
-SHOP_SWIPE_MAX = 12
+SHOP_SWIPE_MAX = 24
 _LIST_REGION = (40, 680, 1040, 1620)
 _ROW_DY = 90
 _SWIPE_END_DIFF = 6.0
@@ -61,10 +61,17 @@ SHOP_ITEMS: tuple[ShopItem, ...] = (
         confirm_id="shop_confirm_juice",
     ),
     ShopItem(
+        item_id="jade_dream",
+        name="翡翠之梦",
+        icon_id="shop_item_jade_dream",
+        name_id="shop_name_jade_dream",
+        confirm_id="",
+    ),
+    ShopItem(
         item_id="magic_iron",
         name="魔铁矿",
         icon_id="shop_item_magic_iron",
-        name_id="",
+        name_id="shop_name_magic_iron",
         confirm_id="",
     ),
 )
@@ -256,9 +263,9 @@ class ShopBuyTask(TaskBase):
             kind="swipe",
             label="向上滑动商店清单",
             x=width // 2,
-            y=int(height * 0.72),
+            y=int(height * 0.70),
             x2=width // 2,
-            y2=int(height * 0.42),
+            y2=int(height * 0.70) - 160,
             message=(
                 f"当前画面上还没有未买完的目标商品，向上拖动清单（第 {self.swipes}/{SHOP_SWIPE_MAX} 次）。"
             ),

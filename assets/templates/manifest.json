@@ -2423,9 +2423,13 @@
       "click_target": true,
       "threshold": 0.85,
       "scales": [
-        1.0,
+        0.8,
+        0.85,
+        0.9,
         0.95,
-        1.05
+        1.0,
+        1.05,
+        1.1
       ],
       "notes": "城里地图上的「商店」招牌字，各城共用同一家商店。不要和金币商店标题里的「商店」搞混；已经在商店里时先认标题，不要再点这个。",
       "width": 170,
@@ -2713,30 +2717,121 @@
     {
       "id": "shop_item_magic_iron",
       "file": "shop_item_magic_iron.png",
-      "source": "user-magic-iron.png",
-      "crop": [
-        5,
-        3,
-        88,
-        70
-      ],
+      "threshold": 0.8,
       "role": "status",
+      "scales": [
+        0.8,
+        0.85,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.15,
+        1.2
+      ],
+      "crop": [
+        55,
+        1230,
+        165,
+        1335
+      ],
+      "width": 110,
+      "height": 105,
+      "source": "shop-after-run.png",
+      "notes": "金币商店清单行里的魔铁矿图标，不含右下角数量",
       "label": "魔铁矿",
       "click_target": false,
+      "scene": null
+    },
+    {
+      "id": "shop_name_magic_iron",
+      "file": "shop_name_magic_iron.png",
       "threshold": 0.8,
+      "role": "status",
       "scales": [
-        1.0,
+        0.8,
+        0.85,
         0.9,
+        0.95,
+        1.0,
+        1.05,
         1.1,
-        1.2,
-        1.25,
-        1.35,
-        1.5,
-        0.8
+        1.15,
+        1.2
       ],
-      "notes": "魔铁矿图标：蓝色晶体，蓝框，已去掉右下角数量。走查当天金币清单里没有这件，第一次在商店里见到后再补一行商品名和确认文案。只在图标对上时点同一行「购买」。",
-      "width": 83,
-      "height": 67,
+      "crop": [
+        200,
+        1258,
+        450,
+        1320
+      ],
+      "width": 250,
+      "height": 62,
+      "source": "shop-after-run.png",
+      "notes": "金币商店清单行「魔铁矿×1」",
+      "label": "魔铁矿",
+      "click_target": false,
+      "scene": null
+    },
+    {
+      "id": "shop_item_jade_dream",
+      "file": "shop_item_jade_dream.png",
+      "threshold": 0.8,
+      "role": "status",
+      "scales": [
+        0.8,
+        0.85,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.15,
+        1.2
+      ],
+      "crop": [
+        78,
+        866,
+        182,
+        975
+      ],
+      "width": 104,
+      "height": 109,
+      "source": "shop-after-run.png",
+      "notes": "金币商店清单行里的翡翠之梦图标，不含右下角数量",
+      "label": "翡翠之梦",
+      "click_target": false,
+      "scene": null
+    },
+    {
+      "id": "shop_name_jade_dream",
+      "file": "shop_name_jade_dream.png",
+      "threshold": 0.8,
+      "role": "status",
+      "scales": [
+        0.8,
+        0.85,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.15,
+        1.2
+      ],
+      "crop": [
+        200,
+        884,
+        510,
+        958
+      ],
+      "width": 310,
+      "height": 74,
+      "source": "shop-after-run.png",
+      "notes": "金币商店清单行「翡翠之梦×1」",
+      "label": "翡翠之梦",
+      "click_target": false,
       "scene": null
     }
   ],

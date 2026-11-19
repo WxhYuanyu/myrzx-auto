@@ -205,6 +205,18 @@ def _pending_stage_message(task) -> str:
 
 
 
+def _card_ready_for_sweep(task, recipe) -> bool:
+    """扫城时只能点已经有标题裁切、而且流程已经走查过的卡。"""
+    card = recipe.card_template
+    if not card or card not in task.by_id:
+        return False
+    if card in recipe.awaiting_crops:
+        return False
+    if recipe.flow == "pending":
+        return False
+    return True
+
+
 def _pick_sweep_card(task, image, clf):
     """扫城时只接当前档、当前城里还没做的卡。有更高等级的也不会在中、低档去点。"""
     sweep = task.sweep
@@ -212,16 +224,11 @@ def _pick_sweep_card(task, image, clf):
     if not candidates:
         return None
     for recipe in candidates:
+        if not _card_ready_for_sweep(task, recipe):
+            # 缺裁切或还没走查：跳过这条，不占用次数，继续看本城其他卡。
+            sweep.skip(recipe)
+            continue
         card = recipe.card_template
-        if _awaiting(task, card) or card not in task.by_id:
-            return _halt(
-                task,
-                clf,
-                clf.scene,
-                "标题裁切还没有",
-                f"「{recipe.name}」是{recipe.tier.zh_name}级委托，标题裁切还没有。"
-                "不会在这块板上改点别的档，也不会编造点击。",
-            )
         match = verbs.match_commission_card(task, image, card)
         if match is None:
             continue
@@ -240,6 +247,9 @@ def _pick_sweep_card(task, image, clf):
 
 
 def _sweep_leave_board(task, image, clf, scene):
+    if task.sweep is not None:
+        for leftover in list(task.sweep.candidates_here()):
+            task.sweep.skip(leftover)
     closed = verbs.close_with_back(
         task,
         image,
@@ -644,6 +654,13 @@ def step_accept_board(task, image, clf):
         )
     card = task.recipe.card_template
     scene = clf.scene
+    sweeping = bool(getattr(task, "auto_sweep", False) and getattr(task, "sweep", None) is not None)
+    if scene is Scene.COMMISSION_LIST and sweeping:
+        picked = _pick_sweep_card(task, image, clf)
+        if picked is not None:
+            return picked
+        # 这一档在这座城已经没有还能认出来的卡，关列表，换下一站。
+        return _sweep_leave_board(task, image, clf, scene)
     if _awaiting(task, card) and scene in {Scene.COMMISSION_LIST, Scene.UNKNOWN}:
         return _halt(
             task,
@@ -653,12 +670,6 @@ def step_accept_board(task, image, clf):
             f"「{task.recipe.name}」的标题裁切还没有，不会在委托板上改点别的卡。",
         )
     if scene is Scene.COMMISSION_LIST:
-        if getattr(task, "auto_sweep", False) and getattr(task, "sweep", None) is not None:
-            picked = _pick_sweep_card(task, image, clf)
-            if picked is not None:
-                return picked
-            # 这一档在这座城已经没有还能认出来的卡，关列表，换下一站。
-            return _sweep_leave_board(task, image, clf, scene)
         card = task.recipe.card_template
         if card and card in task.by_id and verbs.match_commission_card(task, image, card) is not None:
             return verbs.accept_listed_card(task, image, clf)

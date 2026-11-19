@@ -11,7 +11,7 @@ from src.tasks.daily_sweep import (
     recipes_in_sweep_order,
     sweep_plan_text,
 )
-from src.tasks.locations import LANGREN
+from src.tasks.locations import LANGREN, LIANHU, LILITOS
 from src.tasks.recipes import CommissionTier, get_recipe
 from src.vision.templates import templates_by_id
 from src.vision.types import Scene
@@ -203,3 +203,122 @@ def test_missing_juice_halts_one_quest_and_skips_during_a_sweep(templates):
     assert sweep_task.sweep.completed == 0
     assert "change_taste" in sweep_task.sweep.finished_ids
     assert sweep_task.recipe.name == "冒险小队寻求支援"
+
+
+def test_missing_card_leaves_for_next_region_during_sweep(templates):
+    """扫城时列表里没有当前这条，关列表去下一站；单独 --quest 仍停止。"""
+    by_id = templates_by_id(templates)
+    board = _paste(by_id, ("commission_center_title",), height=800, width=1400)
+
+    single = DailyCommissionTask(specs=templates, recipe=get_recipe("喳喳布林入侵"))
+    halted = single.plan(board)
+    assert halted.status == "halt_missing"
+    assert halted.action is not None
+    assert halted.action.kind == "halt"
+    assert "没有找到「喳喳布林入侵」" in halted.message
+    assert "不会改点其他委托" in halted.message
+
+    sweep_task = DailyCommissionTask(specs=templates, recipe=get_recipe("喳喳布林入侵"))
+    sweep_task.auto_sweep = True
+    sweep_task.sweep = SweepState.start()
+    assert sweep_task.sweep.place_id == LILITOS.id
+    closed = sweep_task.plan(board)
+    assert closed.status == "continue"
+    assert closed.action is not None
+    assert closed.action.kind == "click"
+    assert closed.action.label == "返回"
+    assert "换下一站" in (closed.action.message or "")
+    assert sweep_task.sweep_move_next is True
+    assert sweep_task.sweep.completed == 0
+    assert "zhazha_bulin" in sweep_task.sweep.finished_ids
+
+    # 列表关掉后，在协会/城里才会换下一张图。空白页足够触发这一步。
+    advanced = sweep_task.plan(np.zeros((400, 400, 3), dtype=np.uint8))
+    assert sweep_task.sweep.place_id == LIANHU.id
+    assert sweep_task.recipe.name == "处理毒桶"
+    assert sweep_task.phase is Phase.ACCEPT
+    assert advanced.status in {"continue", "halt_missing"}
+
+
+def test_sweep_skips_missing_crops_and_picks_other_card_here(templates):
+    """莉安湖扫城：温泉治疗还没有标题裁切，应跳过并点本城已有裁切的「讨伐食人花」。"""
+    by_id = templates_by_id(templates)
+    board = _paste(
+        by_id,
+        ("commission_center_title", "commission_man_eater"),
+        height=800,
+        width=1400,
+    )
+    sweep_task = DailyCommissionTask(specs=templates, recipe=get_recipe("处理毒桶"))
+    sweep_task.auto_sweep = True
+    sweep_task.sweep = SweepState.start()
+    sweep_task.sweep.place_id = LIANHU.id
+    sweep_task.recipe = sweep_task.sweep.travel_recipe()
+    picked = sweep_task.plan(board)
+    assert picked.status == "continue"
+    assert picked.action is not None
+    assert picked.action.kind == "click"
+    assert "讨伐食人花" in (picked.action.message or picked.message or "")
+    assert picked.action.label != "返回"
+    assert "hot_spring" in sweep_task.sweep.finished_ids
+    assert sweep_task.sweep.completed == 0
+    assert sweep_task.recipe.name == "讨伐食人花"
+
+
+def test_sweep_leaves_when_only_uncropped_quests_remain(templates):
+    """本城只剩下缺裁切的委托时，关列表去下一站，单独 --quest 仍停止。"""
+    by_id = templates_by_id(templates)
+    board = _paste(by_id, ("commission_center_title",), height=800, width=1400)
+
+    single = DailyCommissionTask(specs=templates, recipe=get_recipe("温泉治疗"))
+    halted = single.plan(board)
+    assert halted.status == "halt_missing"
+    assert "裁切" in halted.message
+
+    sweep_task = DailyCommissionTask(specs=templates, recipe=get_recipe("处理毒桶"))
+    sweep_task.auto_sweep = True
+    sweep_task.sweep = SweepState.start()
+    sweep_task.sweep.place_id = LIANHU.id
+    # 本城能认的另外两条先当作今天没有，只剩下缺裁切的「温泉治疗」。
+    sweep_task.sweep.skip(get_recipe("处理毒桶"))
+    sweep_task.sweep.skip(get_recipe("讨伐食人花"))
+    sweep_task.recipe = get_recipe("温泉治疗")
+    closed = sweep_task.plan(board)
+    assert closed.status == "continue"
+    assert closed.action is not None
+    assert closed.action.kind == "click"
+    assert closed.action.label == "返回"
+    assert "换下一站" in (closed.action.message or "")
+    assert "hot_spring" in sweep_task.sweep.finished_ids
+    assert sweep_task.sweep.completed == 0
+    assert sweep_task.sweep_move_next is True
+
+
+def test_sweep_leaves_association_after_missing_card(templates):
+    """关列表后若还在协会里，要点「离开」去下一站，不能再把「委托」点开。"""
+    by_id = templates_by_id(templates)
+    board = _paste(by_id, ("commission_center_title",), height=800, width=1400)
+    room = _paste(
+        by_id,
+        ("association_commission", "association_leave"),
+        height=800,
+        width=1400,
+    )
+    sweep_task = DailyCommissionTask(specs=templates, recipe=get_recipe("喳喳布林入侵"))
+    sweep_task.auto_sweep = True
+    sweep_task.sweep = SweepState.start()
+    closed = sweep_task.plan(board)
+    assert closed.action is not None
+    assert closed.action.label == "返回"
+    assert sweep_task.sweep_move_next is True
+
+    left = sweep_task.plan(room)
+    assert left.status == "continue"
+    assert left.action is not None
+    assert left.action.kind == "click"
+    assert left.action.label == "离开"
+    assert "委托" not in (left.action.label or "")
+    assert "再去" in (left.action.message or "")
+    assert sweep_task.sweep.place_id == LIANHU.id
+    assert sweep_task.recipe.name == "处理毒桶"
+    assert sweep_task.phase is Phase.ACCEPT

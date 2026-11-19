@@ -668,6 +668,9 @@ def _on_stage_select(task: Any, image: np.ndarray) -> bool:
 
 def step(task: Any, image: np.ndarray, clf: Any) -> StepResult | None:
     """导航一步。回过大地图并进入目标协会后，把这一步交给委托接取，不再停住。"""
+    if task.phase is Phase.IN_BATTLE:
+        # 战斗开场横幅消失后，画面常被判成 UNKNOWN。交给战斗等待，不要去找大地图。
+        return None
     if clf.scene in _QUEST_SCENES and clf.scene is not Scene.ASSOCIATION:
         return None
     if task.phase is not Phase.ACCEPT and (

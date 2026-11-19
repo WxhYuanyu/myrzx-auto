@@ -1530,9 +1530,14 @@ def step_battle(task, image, clf):
             message="关掉这页掉落。委托奖励还没到领取那一步。",
         )
     required = getattr(task.recipe, "fights_required", 1) or 1
-    battle_done = getattr(task, "fights_done", 0) >= required or task.phase is Phase.IN_BATTLE
+    fights_done = getattr(task, "fights_done", 0)
     back_on_stage = verbs.best_of(task, image, ("stage_enter_gold", "stage_enter", "stage_leave")) is not None
-    if battle_done and back_on_stage:
+    if task.phase is Phase.IN_BATTLE and not back_on_stage:
+        # 开场横幅没了之后画面常是 UNKNOWN，继续等「战斗胜利」，不要当未知页或大地图。
+        return task._plan_battle(image, clf)
+    # 回到选关页（还能看到进入/离开）才算这一场打完。单场流程的 fights_done 往往仍是 0，
+    # 不能只看次数，否则「奇怪的魔物」打完不会离开、也不会回 3-20。
+    if (fights_done >= required or task.phase is Phase.IN_BATTLE) and back_on_stage:
         rest = task.recipe.steps[task.step_index + 1 :]
         if any(step != "claim" for step in rest):
             # 例如「奇怪的魔物」打完还要离开、回 3-20 交任务，不能在这里结束。
@@ -1544,7 +1549,7 @@ def step_battle(task, image, clf):
         scene,
         "等待战斗",
         "战斗还没结束。先等下一帧，不点「扫荡」，也不要点「完成」。",
-        status="waiting_battle" if scene is Scene.BATTLE else "skip_unknown",
+        status="waiting_battle" if (scene is Scene.BATTLE or task.phase is Phase.IN_BATTLE) else "skip_unknown",
     )
 
 

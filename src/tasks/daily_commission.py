@@ -191,6 +191,13 @@ class DailyCommissionTask(TaskBase):
                     f"这一档在这座城已经看完。点击「离开」回城，再去「{dest}」。"
                     "不要再点「委托」。",
                 )
+        if (
+            self.phase is Phase.IN_BATTLE
+            and kind in {CommissionKind.BATTLE, CommissionKind.MULTI_BATTLE}
+            and scene in {Scene.UNKNOWN, Scene.BATTLE}
+        ):
+            # 进战之后即使暂时认不出画面，也继续等胜利，不要先走大地图导航。
+            return self._plan_battle(image_bgr, classification)
         nav = navigation.step(self, image_bgr, classification)
         if nav is not None:
             return nav
@@ -237,6 +244,11 @@ class DailyCommissionTask(TaskBase):
             return self._plan_loot(image_bgr, classification)
         if self.phase is Phase.DONE:
             return self._done(classification)
+        if self.phase is Phase.IN_BATTLE and kind in {
+            CommissionKind.BATTLE,
+            CommissionKind.MULTI_BATTLE,
+        }:
+            return self._plan_battle(image_bgr, classification)
         if self.phase in {Phase.GO_STAGE, Phase.IN_BATTLE, Phase.CLAIM}:
             return StepResult(
                 scene=Scene.UNKNOWN,

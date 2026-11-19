@@ -14,7 +14,6 @@ EXPECTED = {
     "city_explore": Scene.CITY_LILITOS,
     "stage_map": Scene.STAGE_MAP,
     "stage_1_3": Scene.STAGE_1_3,
-    "explore_bubble": Scene.STAGE_1_3,
 }
 
 WALKTHROUGH_EXPECTED = {
@@ -115,7 +114,8 @@ def test_capital_comes_from_the_subtitle_not_the_association(screens, templates)
     assert full.best.label == "阿格莱恩独立王国首都"
 
 
-def test_bubble_crop_is_stage_1_3(screens, templates):
+def test_bubble_crop_alone_is_not_stage_1_3(screens, templates):
+    """局部图只有「初步探索」，不能当成莉莉托斯近郊 1-3。"""
     result = classify_scene(screens["explore_bubble"], templates)
-    assert result.scene is Scene.STAGE_1_3
+    assert result.scene is not Scene.STAGE_1_3
     assert any(m.label == "初步探索" for m in result.matches)

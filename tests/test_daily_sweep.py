@@ -30,7 +30,7 @@ def _paste(by_id, template_ids: tuple[str, ...], *, height: int = 800, width: in
 
 def test_manifest_keeps_shop_bag_and_new_quest_templates(templates):
     by_id = templates_by_id(templates)
-    assert len(templates) == 122
+    assert len(templates) == 127
     for template_id in (
         "city_explore_label",
         "commission_change_taste",
@@ -91,7 +91,7 @@ def test_shop_buy_targets_and_one_row_swipe():
     assert by_item["magic_iron"].name == "魔铁矿"
     assert by_item["magic_iron"].name_id == "shop_name_magic_iron"
     assert by_item["magic_iron"].confirm_id == ""
-    assert SHOP_SWIPE_MAX == 24
+    assert SHOP_SWIPE_MAX == 48
 
     task._require = lambda image, template_id: None
     image = np.zeros((1920, 1080, 3), dtype=np.uint8)

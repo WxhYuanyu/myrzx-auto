@@ -71,7 +71,20 @@ def test_full_known_path_through_bubble(screens, templates):
     assert "进入" in no_bubble.message
     assert not task.awaiting_enter
 
-    with_bubble = task.plan(screens["explore_bubble"])
+    bubble = screens["explore_bubble"]
+    title = task.by_id["stage_1_3_title"].image_bgr
+    titled = np.zeros(
+        (
+            bubble.shape[0] + title.shape[0] + 24,
+            max(bubble.shape[1], title.shape[1]) + 16,
+            3,
+        ),
+        dtype=np.uint8,
+    )
+    titled[8 : 8 + title.shape[0], 8 : 8 + title.shape[1]] = title
+    y = title.shape[0] + 16
+    titled[y : y + bubble.shape[0], 8 : 8 + bubble.shape[1]] = bubble
+    with_bubble = task.plan(titled)
     assert with_bubble.scene is Scene.STAGE_1_3
     assert with_bubble.action is not None
     assert with_bubble.action.kind == "click"

@@ -14,11 +14,11 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 
-import cv2
 import numpy as np
 
 from src.tasks.base import PlannedAction, StepResult, TaskBase
 from src.tasks import verbs
+from src.tasks.scroll import SHOP_LIST_REGION, ListScroll, cell_signature
 from src.vision.classify import Classification, classify_scene
 from src.vision.match import find_template, match_template
 from src.vision.templates import load_templates, templates_by_id
@@ -26,10 +26,19 @@ from src.vision.types import Box, Match, Scene
 
 logger = logging.getLogger("myrzx.task.shop_buy")
 
-SHOP_SWIPE_MAX = 24
-_LIST_REGION = (40, 680, 1040, 1620)
+# 安全上限，不是停止条件。清单是否到底看物品区有没有还在变。
+SHOP_SWIPE_MAX = 48
 _ROW_DY = 90
-_SWIPE_END_DIFF = 6.0
+_SHOP_ANCHORS = (
+    "shop_buy",
+    "shop_buy_disabled",
+    "shop_name_juice",
+    "shop_item_juice",
+    "shop_name_jade_dream",
+    "shop_item_jade_dream",
+    "shop_name_magic_iron",
+    "shop_item_magic_iron",
+)
 
 # 大地图上可点进的城市（不要点「阿格莱恩」「克里斯汀」这两块区名）。
 _WORLD_CITIES = (
@@ -93,7 +102,7 @@ class ShopBuyTask(TaskBase):
         self.results: dict[str, str] = {item.item_id: "pending" for item in SHOP_ITEMS}
         self.bought_counts: dict[str, int] = {item.item_id: 0 for item in SHOP_ITEMS}
         self.swipes = 0
-        self._last_list: np.ndarray | None = None
+        self.scroll = ListScroll(region=SHOP_LIST_REGION, max_swipes=SHOP_SWIPE_MAX)
         self._leaving = False
         self._match_cache = {}
 
@@ -244,21 +253,30 @@ class ShopBuyTask(TaskBase):
         if all(status != "pending" for status in self.results.values()):
             return self._leave_shop(image, clf)
 
-        if self._list_ended(image):
+        decision = self.scroll.observe(image, precise=self._shop_precise)
+        self.swipes = self.scroll.swipes
+        if decision == "bottom":
             for item in SHOP_ITEMS:
                 if self.results[item.item_id] == "pending":
                     self.results[item.item_id] = "missing"
-                    self.log.info("金币清单翻完，没有「%s」，跳过。", item.name)
+                    self.log.info("金币清单翻到底，没有「%s」，跳过。", item.name)
             return self._leave_shop(image, clf)
-
-        if self.swipes >= SHOP_SWIPE_MAX:
+        if decision == "cap":
             for item in SHOP_ITEMS:
                 if self.results[item.item_id] == "pending":
-                    self.results[item.item_id] = "missing"
+                    self.results[item.item_id] = "unconfirmed"
+                    self.log.info(
+                        "金币清单滑到安全次数，还不能确认已经到底，先停下。没有看到「%s」。",
+                        item.name,
+                    )
             return self._leave_shop(image, clf)
 
-        self.swipes += 1
         height, width = image.shape[:2]
+        why = (
+            "这一帧物品区认不稳，不把它当成已经到底，再向上拖一截。"
+            if decision == "inconclusive"
+            else "当前画面上还没有未买完的目标商品，向上拖动清单。"
+        )
         action = PlannedAction(
             kind="swipe",
             label="向上滑动商店清单",
@@ -266,9 +284,8 @@ class ShopBuyTask(TaskBase):
             y=int(height * 0.70),
             x2=width // 2,
             y2=int(height * 0.70) - 160,
-            message=(
-                f"当前画面上还没有未买完的目标商品，向上拖动清单（第 {self.swipes}/{SHOP_SWIPE_MAX} 次）。"
-            ),
+            message=f"{why}（第 {self.swipes}/{SHOP_SWIPE_MAX} 次）。",
+            delay_sec=0.55,
         )
         return StepResult(
             scene=clf.scene,
@@ -317,21 +334,20 @@ class ShopBuyTask(TaskBase):
             return None
         return max(same_row, key=lambda m: m.score)
 
-    def _list_ended(self, image: np.ndarray) -> bool:
-        x1, y1, x2, y2 = _LIST_REGION
-        h, w = image.shape[:2]
-        x2, y2 = min(x2, w), min(y2, h)
+    def _shop_precise(self, image: np.ndarray, box: tuple[int, int, int, int]):
+        """停住之后看购买按钮和商品名的位置。区域是空的或认不出内容时返回 None。"""
+        x1, y1, x2, y2 = box
         region = image[y1:y2, x1:x2]
-        if region.size == 0:
-            return False
-        small = cv2.resize(region, (160, 220), interpolation=cv2.INTER_AREA)
-        if self._last_list is None or self.swipes == 0:
-            self._last_list = small
-            return False
-        diff = float(np.mean(np.abs(small.astype(np.int16) - self._last_list.astype(np.int16))))
-        self._last_list = small
-        self.log.info("商店清单变化量 %.2f（小于 %.1f 视为翻到底）", diff, _SWIPE_END_DIFF)
-        return diff < _SWIPE_END_DIFF and self.swipes >= 1
+        anchors: list[tuple[str, int, int]] = []
+        for template_id in _SHOP_ANCHORS:
+            for match in self._find_all(image, template_id, max_results=8):
+                cx, cy = match.box.center
+                if x1 <= cx < x2 and y1 <= cy < y2:
+                    anchors.append((template_id, cy // 10, cx // 10))
+        cells = cell_signature(region)
+        if not anchors and cells is None:
+            return None
+        return (tuple(sorted(anchors)), cells)
 
     def _leave_shop(self, image: np.ndarray, clf: Classification) -> StepResult:
         self._leaving = True
@@ -359,6 +375,8 @@ class ShopBuyTask(TaskBase):
                     parts.append(f"「{item.name}」已经是买空状态")
             elif status == "missing":
                 parts.append(f"「{item.name}」今天金币清单里没有，已跳过")
+            elif status == "unconfirmed":
+                parts.append(f"「{item.name}」滑到安全次数，还不能确认清单到底，先跳过")
             else:
                 parts.append(f"「{item.name}」还没处理完")
         return "金币商店买完了：" + "；".join(parts) + "。"

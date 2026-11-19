@@ -941,7 +941,7 @@ class DailyCommissionTask(TaskBase):
                 message=missing,
             )
         place = self._place()
-        card = self._require(image_bgr, self.recipe.card_template)
+        card = verbs.match_commission_card(self, image_bgr)
         if card is None and place and place.board_title:
             board = self._require(image_bgr, place.board_title)
             if board is None:

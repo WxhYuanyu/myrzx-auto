@@ -270,11 +270,11 @@
         175,
         482
       ],
-      "scene": "STAGE_1_3",
+      "scene": null,
       "role": "click_target",
       "label": "初步探索",
       "click_target": true,
-      "notes": "左侧节点标签 初步探索（1-3-1）。选哪一个由气泡决定，不要默认点这个。",
+      "notes": "左侧节点标签 初步探索（1-3-1）。选哪一个由气泡决定，不要默认点这个。 通用控件，不作为「莉莉托斯近郊 1-3」的页面标记。",
       "width": 130,
       "height": 34
     },
@@ -288,11 +288,11 @@
         298,
         385
       ],
-      "scene": "STAGE_1_3",
+      "scene": null,
       "role": "click_target",
       "label": "深入探索",
       "click_target": true,
-      "notes": "中间节点标签 深入探索（1-3-2）。",
+      "notes": "中间节点标签 深入探索（1-3-2）。 通用控件，不作为「莉莉托斯近郊 1-3」的页面标记。",
       "width": 120,
       "height": 33
     },
@@ -306,11 +306,11 @@
         458,
         485
       ],
-      "scene": "STAGE_1_3",
+      "scene": null,
       "role": "click_target",
       "label": "完全探索",
       "click_target": true,
-      "notes": "右侧节点标签 完全探索（1-3-3）。",
+      "notes": "右侧节点标签 完全探索（1-3-3）。 通用控件，不作为「莉莉托斯近郊 1-3」的页面标记。",
       "width": 140,
       "height": 37
     },
@@ -324,11 +324,11 @@
         312,
         725
       ],
-      "scene": "STAGE_1_3",
+      "scene": null,
       "role": "click_target",
       "label": "进入",
       "click_target": true,
-      "notes": "底部「进入 / ENTER」按钮。不要点下方的「扫荡」，除非以后另有说明。",
+      "notes": "底部「进入 / ENTER」按钮。不要点下方的「扫荡」，除非以后另有说明。 通用控件，不作为「莉莉托斯近郊 1-3」的页面标记。",
       "width": 137,
       "height": 95
     },
@@ -396,11 +396,11 @@
         165,
         262
       ],
-      "scene": "STAGE_1_3",
+      "scene": null,
       "role": "click_target",
       "label": "初步探索",
       "click_target": true,
-      "notes": "从 09 气泡局部图裁切的「初步探索」标签（含星标下沿）。08 同源模板在这张局部图上分数偏紧，用本模板稳住识别。",
+      "notes": "从 09 气泡局部图裁切的「初步探索」标签（含星标下沿）。08 同源模板在这张局部图上分数偏紧，用本模板稳住识别。 通用控件，不作为「莉莉托斯近郊 1-3」的页面标记。",
       "width": 125,
       "height": 34
     },
@@ -1169,24 +1169,158 @@
     {
       "id": "commission_eager_adventurer",
       "file": "commission_eager_adventurer.png",
-      "source": "02_commission_list.png",
+      "source": "assets/reference/quest-enthusiastic-adventurer.png",
       "crop": [
-        175,
-        1062,
-        740,
-        1142
+        82,
+        6,
+        232,
+        48
       ],
       "scene": "COMMISSION_LIST",
       "role": "click_only",
       "label": "“热情”的冒险者",
       "click_target": true,
-      "threshold": 0.9,
+      "threshold": 0.82,
       "scales": [
-        1.0
+        1.0,
+        2.0,
+        2.2,
+        2.25,
+        2.5
       ],
-      "notes": "紫色紧急卡片的标题。只点这一张。画面原文带引号。",
-      "width": 565,
-      "height": 80
+      "notes": "紫色标题「“热情”的冒险者」。用户提供的卡片右缘把「者」和后引号切掉了，模板按可见字形裁，四周留了一点空白，不要求「者」完整才算命中。尺度 2.2 对得上 1080 宽的委托板。标题仍是主信号。",
+      "width": 150,
+      "height": 42
+    },
+    {
+      "id": "commission_eager_portrait",
+      "file": "commission_eager_portrait.png",
+      "source": "assets/reference/quest-enthusiastic-adventurer.png",
+      "crop": [
+        10,
+        8,
+        80,
+        122
+      ],
+      "scene": null,
+      "role": "status",
+      "label": "金发冒险者",
+      "click_target": false,
+      "threshold": 0.82,
+      "scales": [
+        1.0,
+        2.0,
+        2.2,
+        2.25,
+        2.5
+      ],
+      "notes": "「“热情”的冒险者」卡片左侧金发头像。只作辅助，不单独点击。",
+      "width": 70,
+      "height": 114
+    },
+    {
+      "id": "commission_eager_badge",
+      "file": "commission_eager_badge.png",
+      "source": "assets/reference/quest-enthusiastic-adventurer.png",
+      "crop": [
+        12,
+        116,
+        80,
+        152
+      ],
+      "scene": null,
+      "role": "status",
+      "label": "紧急",
+      "click_target": false,
+      "threshold": 0.82,
+      "scales": [
+        1.0,
+        2.0,
+        2.2,
+        2.25,
+        2.5
+      ],
+      "notes": "这张卡左下粉色「紧急」角标。只作辅助，不单独点击。",
+      "width": 68,
+      "height": 36
+    },
+    {
+      "id": "commission_eager_desc",
+      "file": "commission_eager_desc.png",
+      "source": "assets/reference/quest-enthusiastic-adventurer.png",
+      "crop": [
+        90,
+        48,
+        216,
+        100
+      ],
+      "scene": null,
+      "role": "status",
+      "label": "快来跟我比赛挑战怪物吧",
+      "click_target": false,
+      "threshold": 0.82,
+      "scales": [
+        1.0,
+        2.0,
+        2.2,
+        2.25,
+        2.5
+      ],
+      "notes": "卡片说明「快来跟我比赛挑战怪物吧」。标题对不上时，和头像、奖励一起才能确认这张卡。",
+      "width": 126,
+      "height": 52
+    },
+    {
+      "id": "commission_eager_gold",
+      "file": "commission_eager_gold.png",
+      "source": "assets/reference/quest-enthusiastic-adventurer.png",
+      "crop": [
+        80,
+        122,
+        158,
+        156
+      ],
+      "scene": null,
+      "role": "status",
+      "label": "900金币",
+      "click_target": false,
+      "threshold": 0.82,
+      "scales": [
+        1.0,
+        2.0,
+        2.2,
+        2.25,
+        2.5
+      ],
+      "notes": "这张卡底部的金币 900。只作辅助，不点购买或氪金。",
+      "width": 78,
+      "height": 34
+    },
+    {
+      "id": "commission_eager_gem",
+      "file": "commission_eager_gem.png",
+      "source": "assets/reference/quest-enthusiastic-adventurer.png",
+      "crop": [
+        154,
+        122,
+        220,
+        154
+      ],
+      "scene": null,
+      "role": "status",
+      "label": "20紫币",
+      "click_target": false,
+      "threshold": 0.82,
+      "scales": [
+        1.0,
+        2.0,
+        2.2,
+        2.25,
+        2.5
+      ],
+      "notes": "这张卡底部的紫色货币 20。只作辅助。",
+      "width": 66,
+      "height": 32
     },
     {
       "id": "quest_accepted_scorpion",
@@ -1996,10 +2130,10 @@
       "file": "stage_node_3_20.png",
       "source": "tests/fixtures/priority/node_3_20.png",
       "crop": [
-        22,
-        52,
+        4,
+        34,
         68,
-        148
+        152
       ],
       "scene": "STAGE_MAP",
       "role": "click_only",
@@ -2008,16 +2142,17 @@
       "threshold": 0.9,
       "scales": [
         1.0,
+        1.4,
         1.5,
+        1.6,
+        1.75,
         2.0,
         2.2,
-        2.25,
-        2.5,
-        3.0
+        0.9
       ],
-      "notes": "北赛拉姆关卡图上的 3-20：爪印旗、三星和「3-20」。不含右侧对话气泡。奇怪的魔物在这里对话，打完 3-23-2 再回到这里交任务。",
-      "width": 46,
-      "height": 96
+      "notes": "和 stage_flag_3_20 同一张完整裁切，给点 3-20 时作备用。含爪印旗、三星和完整的「3-20」，不含右侧气泡。",
+      "width": 64,
+      "height": 118
     },
     {
       "id": "stage_flag_2_9",
@@ -2138,24 +2273,29 @@
     {
       "id": "stage_flag_3_20",
       "file": "stage_flag_3_20.png",
-      "source": "strange-back-region.png",
+      "source": "tests/fixtures/priority/node_3_20.png",
       "crop": [
-        650,
-        380,
-        775,
-        545
+        4,
+        34,
+        68,
+        152
       ],
       "scene": "STAGE_MAP",
       "role": "click_target",
       "label": "3-20",
       "click_target": true,
-      "notes": "北赛拉姆地区的 3-20 旗帜：爪印旗、三星和「3-20」字样，不含右侧气泡。给「奇怪的魔物」进 3-20 对话、打完再回来交任务用，不点气泡。",
-      "width": 125,
-      "height": 165,
+      "notes": "北赛拉姆地区的 3-20：爪印旗、三星和完整的「3-20」。旧裁切把数字底部切掉，匹配框会偏到旁边的 3-C1。现从 node_3_20.png 重新裁，数字、连字符和底边都留了一点空白，不含右侧对话气泡。原来的 strange-back-region.png 不在仓库里，实机若节点更大，仍要用这组尺度去对。",
+      "width": 64,
+      "height": 118,
       "scales": [
         1.0,
-        0.9,
-        0.8
+        1.4,
+        1.5,
+        1.6,
+        1.75,
+        2.0,
+        2.2,
+        0.9
       ]
     },
     {

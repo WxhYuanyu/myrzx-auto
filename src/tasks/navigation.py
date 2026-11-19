@@ -6,8 +6,8 @@
 - 看到左下「离开」就点它，不限于选关页（结晶矿洞这类页面也一样）。不点「扫荡」「兑换」「战阵」或矿层入口。
   已经在阿格莱恩或克里斯汀大地图上时，不用「离开」换区。
 - 城里点「大地图」，不点本城的「协会」或「探险」。
-- 已经进了目标城的协会室内（共用的「委托」、协会「离开」或标题里的「协会」）就停。
-  不再点「离开」出去，也不把这一步交给委托板去点「接收」。
+- 已经进了目标城的协会室内（共用的「委托」、协会「离开」或标题里的「协会」）后，
+  把这一步交给委托接取流程去点「委托」。不再点「离开」出去，也不在这一步点「接收」。
 认不出退回按钮就停，不编造点击。
 
 看见大区地图之后再判断目标在哪一边：
@@ -667,7 +667,7 @@ def _on_stage_select(task: Any, image: np.ndarray) -> bool:
 
 
 def step(task: Any, image: np.ndarray, clf: Any) -> StepResult | None:
-    """导航一步。回过大地图并进入目标协会后停住，不把这一步交给委托板。"""
+    """导航一步。回过大地图并进入目标协会后，把这一步交给委托接取，不再停住。"""
     if clf.scene in _QUEST_SCENES and clf.scene is not Scene.ASSOCIATION:
         return None
     if task.phase is not Phase.ACCEPT and (
@@ -689,8 +689,8 @@ def step(task: Any, image: np.ndarray, clf: Any) -> StepResult | None:
         return task._plan_region_to_place(image, clf)
     saw = getattr(task, "saw_continent", False)
     if task.phase is Phase.ACCEPT and saw and _in_target_association_room(task, image):
-        place = _target(task)
-        return _arrived_at_association(clf, place.name if place is not None else "目标城")
+        # 真实委托 / 扫城：到达后交给协会接取流程点「委托」，不再把到达当成停止。
+        return None
     if clf.scene is Scene.ASSOCIATION:
         return None
     if task.phase is Phase.ACCEPT and saw and city_is_target(task, image, clf):

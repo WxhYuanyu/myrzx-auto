@@ -43,7 +43,13 @@ import numpy as np
 from src import config
 from src.tasks.base import PlannedAction, StepResult, TaskBase
 from src.tasks.phase import Phase
-from src.tasks.priority_flows import close_open_bag, plan_priority, reset_item_check
+from src.tasks.priority_flows import (
+    _pick_sweep_card,
+    _sweep_leave_board,
+    close_open_bag,
+    plan_priority,
+    reset_item_check,
+)
 from src.tasks.recipes import CommissionKind, CommissionRecipe, ZHAZHA_BULIN
 from src.tasks import navigation, verbs
 from src.vision.bubble import find_explore_nodes, select_node_by_bubble
@@ -173,6 +179,18 @@ class DailyCommissionTask(TaskBase):
             stopped = self._advance_sweep(classification)
             if stopped is not None:
                 return stopped
+            if scene is Scene.ASSOCIATION:
+                # 刚看完这座城的列表，先离开协会再去下一站，不要又把「委托」点开。
+                place = self._place()
+                dest = place.name if place is not None else "下一站"
+                return verbs.leave_room(
+                    self,
+                    image_bgr,
+                    classification,
+                    Scene.ASSOCIATION,
+                    f"这一档在这座城已经看完。点击「离开」回城，再去「{dest}」。"
+                    "不要再点「委托」。",
+                )
         nav = navigation.step(self, image_bgr, classification)
         if nav is not None:
             return nav
@@ -954,6 +972,13 @@ class DailyCommissionTask(TaskBase):
                 )
                 if closed is not None:
                     return closed
+        if self.auto_sweep and self.sweep is not None:
+            # 扫城：本城当前档没有认出的卡，就关列表去下一站，不改点别的委托。
+            # 单独 --quest 仍走下面的停止，避免误点其他卡片。
+            picked = _pick_sweep_card(self, image_bgr, clf)
+            if picked is not None:
+                return picked
+            return _sweep_leave_board(self, image_bgr, clf, Scene.COMMISSION_LIST)
         return verbs.accept_listed_card(self, image_bgr, clf)
 
     def _plan_quest_detail(self, image_bgr: np.ndarray, clf: Classification) -> StepResult:

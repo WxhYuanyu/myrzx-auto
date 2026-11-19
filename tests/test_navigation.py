@@ -671,19 +671,24 @@ def test_landmarks_pan_north_toward_litrile_and_the_capital(walkthrough, templat
     assert (visible.action.x, visible.action.y) == visible.action.match.box.center
 
 
-def test_target_association_room_stops_without_leaving(walkthrough, screens, templates):
-    """回过大地图后，目标城的协会室内是到达，不再点离开，也不去点接收。"""
+def test_target_association_room_opens_commission_without_leaving(
+    walkthrough, screens, templates
+):
+    """回过大地图后，目标城的协会室内交给委托流程点「委托」，不点离开，也不点接收。"""
     capital = DailyCommissionTask(specs=templates)
     capital.saw_continent = True
     for image in (walkthrough["wt_association"], screens["association"]):
         arrived = capital.plan(image)
+        assert arrived.status == "continue"
         assert arrived.action is not None
-        assert arrived.action.kind == "halt"
-        assert arrived.action.label == "已到协会"
+        assert arrived.action.kind == "click"
+        assert arrived.action.label == "委托"
         assert arrived.action.label != "离开"
         assert arrived.action.label != "接收"
-        assert arrived.action.x is None
-        assert "王城莉莉托斯" in (arrived.action.message or "")
+        assert arrived.action.label != "已到协会"
+        assert arrived.action.x is not None
+        assert "导航到此结束" not in (arrived.action.message or "")
+        assert "委托中心" in (arrived.action.message or "")
 
     desert = DailyCommissionTask(specs=templates, recipe=get_recipe("请让他们安息"))
     desert.saw_continent = True
@@ -694,10 +699,12 @@ def test_target_association_room_stops_without_leaving(walkthrough, screens, tem
     desert_room = desert.plan(room)
     assert desert_room.action is not None
     assert desert_room.action.kind == "halt"
-    assert desert_room.action.label == "已到协会"
+    assert desert_room.action.label == "未找到委托"
     assert desert_room.action.label != "离开"
     assert desert_room.action.label != "接收"
+    assert desert_room.action.label != "已到协会"
     assert desert_room.action.x is None
+    assert "图兰顿沙漠" in (desert_room.action.message or "")
 
     wrong = DailyCommissionTask(specs=templates, recipe=get_recipe("受困的同伴"))
     wrong.saw_continent = True
@@ -716,8 +723,10 @@ def test_target_association_room_stops_without_leaving(walkthrough, screens, tem
     stopped = unnamed.plan(shared)
     assert stopped.action is not None
     assert stopped.action.kind == "halt"
-    assert stopped.action.label == "已到协会"
+    assert stopped.action.label == "标题裁切还没有"
     assert stopped.action.label != "离开"
+    assert stopped.action.label != "已到协会"
+    assert "导航到此结束" not in (stopped.action.message or "")
     assert stopped.action.x is None
 
     still_outside = DailyCommissionTask(specs=templates, recipe=get_recipe("受困的同伴"))

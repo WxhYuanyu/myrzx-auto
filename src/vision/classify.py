@@ -38,6 +38,18 @@ _SCENE_PRIORITY = (
 # 最高分与次高分差距不超过该值时，按页面特异性打破平局。
 _CLOSE_SCORE_GAP = 0.08
 
+# 这些控件在很多关卡页上都会出现（3-C1、3-23、9-7 都有「深入探索」和「进入」）。
+# 不能拿它们给「莉莉托斯近郊 1-3」投票。1-3 只认左上标题。
+_NOT_STAGE_1_3 = frozenset(
+    {
+        "stage_node_basic",
+        "stage_node_basic_09",
+        "stage_node_deep",
+        "stage_node_full",
+        "stage_enter",
+    }
+)
+
 
 @dataclass
 class Classification:
@@ -110,11 +122,14 @@ def classify_scene(
 
     best_by_scene: dict[Scene, Match] = {}
     for match in matches:
-        if match.scene is None:
+        if match.scene is None or match.template_id in _NOT_STAGE_1_3:
             continue
         current = best_by_scene.get(match.scene)
         if current is None or match.score > current.score:
             best_by_scene[match.scene] = match
+    # 标题不在画面上时，不许靠通用按钮把这一页判成 1-3。
+    if not any(item.template_id == "stage_1_3_title" for item in matches):
+        best_by_scene.pop(Scene.STAGE_1_3, None)
 
     if not best_by_scene:
         return Classification(

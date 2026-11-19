@@ -25,6 +25,7 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
+import cv2
 import numpy as np
 
 from src import config
@@ -657,12 +658,29 @@ def _arrived_at_association(clf: Any, place_name: str) -> StepResult:
     )
 
 
+def _on_stage_select(task: Any, image: np.ndarray) -> bool:
+    """选关页上的「进入 / 离开」。没有 1-3 标题时也不要因此退回大地图。"""
+    return (
+        verbs.best_of(task, image, ("stage_enter", "stage_enter_gold", "stage_leave"))
+        is not None
+    )
+
+
 def step(task: Any, image: np.ndarray, clf: Any) -> StepResult | None:
     """导航一步。回过大地图并进入目标协会后停住，不把这一步交给委托板。"""
     if clf.scene in _QUEST_SCENES and clf.scene is not Scene.ASSOCIATION:
         return None
     if task.phase is not Phase.ACCEPT and (
         clf.scene in _PREP_SCENES or clf.scene is Scene.STAGE_DESERT
+    ):
+        return None
+    # 3-C1 这类选关页不再被判成 1-3。流程进行中看到「进入/离开」就交给步骤，
+    # 不要因为页面成了 UNKNOWN 就点「离开」退回大地图。
+    if (
+        clf.scene is Scene.UNKNOWN
+        and task.phase is not Phase.ACCEPT
+        and getattr(getattr(task, "recipe", None), "flow", "")
+        and _on_stage_select(task, image)
     ):
         return None
     heading = read_heading(task, image)
@@ -818,13 +836,24 @@ def _pan_message(place: MapPlace, direction: str, index: int) -> str:
     )
 
 
+# 找「浪人岬」时每个方向的安全上限。停下来靠的是画面不再移动，不是这个次数。
+_LANGREN_SWIPE_CAP = 20
+_MAP_MOVE_DIFF = 4.0
+
+
 def click_or_pan_to_place(
     task: Any,
     image: np.ndarray,
     clf: Any,
     place: MapPlace,
 ) -> StepResult:
-    """已经站在正确的大区地图上：看见地名就点，看不见就平移，不猜坐标。"""
+    """已经站在正确的大区地图上：看见地名就点，看不见就平移，不猜坐标。
+
+    「浪人岬」不走地标方向。不论从哪一块出发，都先向下滑到下边界，
+    再只向右滑到右边界，然后才认名字。别的地点仍用地标。
+    """
+    if place.id == "langren":
+        return _search_langren_corner(task, image, clf, place)
     matches = list(clf.matches)
     label = find_place_label(task, image, place)
     if label is not None:
@@ -874,6 +903,130 @@ def click_or_pan_to_place(
         status="continue",
         message=action.message,
     )
+
+
+def _search_langren_corner(task: Any, image: np.ndarray, clf: Any, place: MapPlace) -> StepResult:
+    """阿格莱恩上找「浪人岬」：先向下到底，再只向右到头，然后才点名字。"""
+    matches = list(clf.matches)
+    phase = getattr(task, "_langren_phase", "down")
+    if phase == "look":
+        return _finish_langren(task, image, clf, place, matches)
+
+    signature = _map_signature(image)
+    previous = getattr(task, "_langren_prev", None)
+    swipes = int(getattr(task, "_langren_swipes", 0))
+    if signature is None:
+        if swipes >= _LANGREN_SWIPE_CAP:
+            return _langren_cap(clf, place, matches, phase)
+        task._langren_swipes = swipes + 1
+        action = _langren_swipe(image, phase, task._langren_swipes)
+        action.message = (
+            "这一帧没法判断阿格莱恩地图有没有移动，不把它当成边界。"
+            + action.message
+        )
+        return _swipe_result(clf, place, matches, action)
+
+    moved = None if previous is None else _map_moved(previous, signature)
+    task._langren_prev = signature
+    if previous is not None and moved is False:
+        if phase == "down":
+            task._langren_phase = "right"
+            task._langren_swipes = 1
+            action = _langren_swipe(image, "right", 1)
+            action.message = (
+                "地图向下已经到下边界（画面不再移动）。接下来只向右滑动，直到右边界。"
+                "不再上下滑动。"
+            )
+            return _swipe_result(clf, place, matches, action)
+        task._langren_phase = "look"
+        return _finish_langren(task, image, clf, place, matches)
+
+    if swipes >= _LANGREN_SWIPE_CAP:
+        return _langren_cap(clf, place, matches, phase)
+    task._langren_swipes = swipes + 1
+    action = _langren_swipe(image, phase, task._langren_swipes)
+    return _swipe_result(clf, place, matches, action)
+
+
+def _finish_langren(task, image, clf, place, matches) -> StepResult:
+    label = find_place_label(task, image, place)
+    if label is not None:
+        task._langren_phase = "down"
+        task._langren_prev = None
+        task._langren_swipes = 0
+        task.map_swipes = 0
+        task._pan_key = None
+        task.pending_city = place.name
+        matches = _merge(matches, label)
+        return task._click_result(
+            place.region.scene,
+            clf,
+            matches,
+            label,
+            "已到达阿格莱恩地图右下角。点击「浪人岬」进入。",
+        )
+    missing = (
+        "已到达阿格莱恩地图右下角，仍然没有看到「浪人岬」，已停止。"
+        "不会继续滑动，也不会按坐标猜点。"
+    )
+    return _halt(clf, place.region.scene, "未找到浪人岬", missing)
+
+
+def _langren_cap(clf, place, matches, phase: str) -> StepResult:
+    side = "下" if phase == "down" else "右"
+    missing = (
+        f"向{side}滑动已经达到安全次数，仍不能确认地图的{side}边界，已停止。"
+        "不会继续无限滑动，也不会按坐标猜点。"
+    )
+    return _halt(clf, place.region.scene, "未找到浪人岬", missing)
+
+
+def _langren_swipe(image: np.ndarray, phase: str, index: int) -> PlannedAction:
+    if phase == "right":
+        action = _swipe(image, "west")
+        action.message = (
+            "已经在地图下边界。只向右滑动，直到右边界。"
+            f"第 {index} 次向右。不要再上下滑动。"
+        )
+        return action
+    action = _swipe(image, "north")
+    action.message = (
+        "在阿格莱恩大地图上找「浪人岬」。先向下滑动，直到地图到达下边界。"
+        "这一帧地图还在移动，继续向下，不同时左右滑动。"
+        f"第 {index} 次向下。"
+    )
+    return action
+
+
+def _swipe_result(clf, place, matches, action: PlannedAction) -> StepResult:
+    return StepResult(
+        scene=place.region.scene,
+        reason=clf.reason,
+        matches=matches,
+        action=action,
+        status="continue",
+        message=action.message,
+    )
+
+
+def _map_signature(image: np.ndarray) -> np.ndarray | None:
+    """大地图中部。不比左上区名和底部页签，那些不跟着地图走。"""
+    height, width = image.shape[:2]
+    if height < 80 or width < 80:
+        return None
+    y1, y2 = int(height * 0.22), int(height * 0.78)
+    x1, x2 = int(width * 0.08), int(width * 0.92)
+    if y2 - y1 < 20 or x2 - x1 < 20:
+        return None
+    gray = cv2.cvtColor(image[y1:y2, x1:x2], cv2.COLOR_BGR2GRAY)
+    return cv2.resize(gray, (40, 48), interpolation=cv2.INTER_AREA)
+
+
+def _map_moved(previous: np.ndarray, current: np.ndarray) -> bool:
+    if previous.shape != current.shape:
+        return True
+    diff = float(np.mean(np.abs(previous.astype(np.int16) - current.astype(np.int16))))
+    return diff >= _MAP_MOVE_DIFF
 
 
 def _merge(matches: list[Match], new: Match | None) -> list[Match]:

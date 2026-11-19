@@ -15,7 +15,20 @@ from typing import Any
 from src import config
 from src.tasks.base import PlannedAction, StepResult
 from src.tasks.phase import Phase
-from src.vision.types import Match, Scene
+from src.vision.match import find_template
+from src.vision.types import Box, Match, Scene
+
+# 「“热情”的冒险者」标题是主信号。分数略低时，用这张卡上的头像、紧急、
+# 说明和奖励确认，确认不了就不点别的卡。阈值只对这一张卡，不改全局。
+_EAGER_CARD = "commission_eager_adventurer"
+_EAGER_AUX = (
+    "commission_eager_portrait",
+    "commission_eager_badge",
+    "commission_eager_desc",
+    "commission_eager_gold",
+    "commission_eager_gem",
+)
+_EAGER_TITLE_FLOOR = 0.75
 
 
 def card_missing_message(name: str) -> str:
@@ -88,10 +101,97 @@ def open_commission_board(task: Any, image: Any, clf: Any) -> StepResult:
     )
 
 
+def match_commission_card(task: Any, image: Any, card_id: str | None = None) -> Match | None:
+    """按卡片 id 找委托。热情这张会用辅助特征，其他卡仍只认自己的标题。"""
+    card_id = card_id or task.recipe.card_template
+    if card_id == _EAGER_CARD:
+        return _find_eager_card(task, image)
+    return task._require(image, card_id)
+
+
+def _find_eager_card(task: Any, image: Any) -> Match | None:
+    spec = task.by_id.get(_EAGER_CARD)
+    if spec is None:
+        return None
+    title = task._require(image, _EAGER_CARD)
+    aux = _eager_aux(task, image)
+    if title is not None:
+        return title
+    # 标题差一点时，再按这张卡自己的下限看一眼，并要求旁边的特征对得上。
+    weak = find_template(image, spec, threshold=_EAGER_TITLE_FLOOR)
+    if weak is not None and _aux_near(weak.box, aux) >= 2:
+        return weak
+    confirmed = _eager_cluster(image, aux)
+    if confirmed is None:
+        return None
+    return confirmed
+
+
+def _eager_aux(task: Any, image: Any) -> list[Match]:
+    found: list[Match] = []
+    for template_id in _EAGER_AUX:
+        if template_id not in task.by_id:
+            continue
+        match = task._require(image, template_id)
+        if match is not None:
+            found.append(match)
+    return found
+
+
+def _aux_near(box: Box, aux: list[Match]) -> int:
+    cx, cy = box.center
+    span = max(box.w, box.h, 80) * 4
+    count = 0
+    for item in aux:
+        ix, iy = item.box.center
+        if abs(ix - cx) <= span and abs(iy - cy) <= span:
+            count += 1
+    return count
+
+
+def _eager_cluster(image: Any, aux: list[Match]) -> Match | None:
+    """没有可靠标题时，说明句加上头像和奖励必须挤在同一张卡上才点。"""
+    by_id = {item.template_id: item for item in aux}
+    desc = by_id.get("commission_eager_desc")
+    portrait = by_id.get("commission_eager_portrait")
+    if desc is None or portrait is None:
+        return None
+    if portrait.box.center[0] > desc.box.center[0] + 40:
+        return None
+    extras = [
+        by_id[key]
+        for key in (
+            "commission_eager_badge",
+            "commission_eager_gold",
+            "commission_eager_gem",
+        )
+        if key in by_id
+    ]
+    near = [item for item in extras if _aux_near(desc.box, [item]) >= 1]
+    if len(near) < 2:
+        return None
+    height, width = image.shape[:2]
+    points = [desc.box.center, portrait.box.center] + [item.box.center for item in near]
+    xs = [point[0] for point in points]
+    ys = [point[1] for point in points]
+    if max(xs) - min(xs) > width * 0.55 or max(ys) - min(ys) > height * 0.45:
+        return None
+    # 点说明文字，它在这张卡上，不会落到旁边另一张标题上。
+    return Match(
+        template_id=desc.template_id,
+        label="“热情”的冒险者",
+        scene=Scene.COMMISSION_LIST,
+        role="click_only",
+        box=desc.box,
+        score=min(item.score for item in [desc, portrait, *near]),
+        scale=desc.scale,
+    )
+
+
 def accept_listed_card(task: Any, image: Any, clf: Any) -> StepResult:
     """只点配方指定的那张卡片。列表里没有它就停，不改点别的委托。"""
     name = task.recipe.name
-    match = task._require(image, task.recipe.card_template)
+    match = match_commission_card(task, image)
     matches = _with(list(clf.matches), match)
     if match is None:
         message = card_missing_message(name)

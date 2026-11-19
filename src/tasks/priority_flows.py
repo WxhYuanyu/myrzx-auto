@@ -10,6 +10,7 @@ from __future__ import annotations
 from src.tasks.base import PlannedAction, StepResult
 from src.tasks.phase import Phase
 from src.tasks import navigation, verbs
+from src.tasks.scroll import BAG_ITEM_REGION, ListScroll, cell_signature
 from src import config
 from src.vision.types import Scene
 
@@ -221,7 +222,7 @@ def _pick_sweep_card(task, image, clf):
                 f"「{recipe.name}」是{recipe.tier.zh_name}级委托，标题裁切还没有。"
                 "不会在这块板上改点别的档，也不会编造点击。",
             )
-        match = task._require(image, card)
+        match = verbs.match_commission_card(task, image, card)
         if match is None:
             continue
         changed = task.recipe.quest_id != recipe.quest_id
@@ -313,13 +314,40 @@ def step_pending(task, image, clf):
     )
 
 
-BAG_SWIPE_MAX = 20
+# 安全上限。约 75 行只是观察到的数量，停不停看物品区有没有还在变。
+BAG_SWIPE_CAP = 120
 
 
 def reset_item_check(task) -> None:
     task.item_ready = None
     task.bag_swipes = 0
     task.bag_tab_ready = False
+    task.bag_scroll = None
+
+
+def _bag_scroll(task) -> ListScroll:
+    scroll = getattr(task, "bag_scroll", None)
+    if scroll is None:
+        scroll = ListScroll(region=BAG_ITEM_REGION, max_swipes=BAG_SWIPE_CAP)
+        task.bag_scroll = scroll
+    return scroll
+
+
+def _bag_precise(task, image, box):
+    x1, y1, x2, y2 = box
+    region = image[y1:y2, x1:x2]
+    cells = cell_signature(region)
+    anchor = None
+    item_id = getattr(task.recipe, "required_item_template", None)
+    if item_id:
+        found = task._require(image, item_id)
+        if found is not None:
+            cx, cy = found.box.center
+            if x1 <= cx < x2 and y1 <= cy < y2:
+                anchor = (cy // 8, cx // 8)
+    if cells is None and anchor is None:
+        return None
+    return (anchor, cells)
 
 
 def _bag_open(task, image) -> bool:
@@ -553,15 +581,39 @@ def step_check_item(task, image, clf):
             return closed
         return ADVANCE
 
-    swipes = getattr(task, "bag_swipes", 0)
-    if swipes < BAG_SWIPE_MAX:
-        task.bag_swipes = swipes + 1
+    scroll = _bag_scroll(task)
+    decision = scroll.observe(image, precise=lambda frame, box: _bag_precise(task, frame, box))
+    task.bag_swipes = scroll.swipes
+    if decision in {"swipe", "inconclusive"}:
+        note = (
+            "这一帧物品区认不稳，不把它当成已经到底。"
+            if decision == "inconclusive"
+            else "物品区还在变化。"
+        )
         return _swipe_bag(
             task,
             image,
             clf,
-            f"在「道具」页往下翻，找「{item}」（第 {task.bag_swipes}/{BAG_SWIPE_MAX} 次）。"
+            f"在「道具」页往下翻，找「{item}」。{note}"
+            f"第 {task.bag_swipes}/{BAG_SWIPE_CAP} 次。不要点格子里的物品。",
+        )
+    if decision == "cap":
+        task.item_ready = False
+        closed = close_open_bag(
+            task,
+            image,
+            clf,
+            f"背包滑到安全次数，还不能确认已经到底，先停下。没有确认「{item}」，不接取「{name}」。"
             "不要点格子里的物品。",
+        )
+        if closed is not None:
+            return closed
+        return _halt(
+            task,
+            clf,
+            clf.scene,
+            "背包没有滑到底",
+            f"背包滑到安全次数，还不能确认已经到底。不把这一帧当成没有「{item}」，也不接取「{name}」。",
         )
 
     task.item_ready = False
@@ -569,7 +621,7 @@ def step_check_item(task, image, clf):
         task,
         image,
         clf,
-        f"翻完「道具」页也没有「{item}」，关上背包，不接取「{name}」。不要点格子里的物品。",
+        f"「道具」页已经滑到底，没有「{item}」，关上背包，不接取「{name}」。不要点格子里的物品。",
     )
     if closed is not None:
         return closed
@@ -608,7 +660,7 @@ def step_accept_board(task, image, clf):
             # 这一档在这座城已经没有还能认出来的卡，关列表，换下一站。
             return _sweep_leave_board(task, image, clf, scene)
         card = task.recipe.card_template
-        if card and card in task.by_id and task._require(image, card) is not None:
+        if card and card in task.by_id and verbs.match_commission_card(task, image, card) is not None:
             return verbs.accept_listed_card(task, image, clf)
         # 列表里没有这张卡，当作已经接过：关列表，再按后续步骤离开、重进、对话。
         task.phase = Phase.GO_STAGE

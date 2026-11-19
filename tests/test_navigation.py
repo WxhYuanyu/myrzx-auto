@@ -499,10 +499,24 @@ def test_moved_label_is_clicked_where_it_is_not_where_it_was(walkthrough, templa
     hidden = click_or_pan_to_place(task, image, clf, LANGREN)
     assert hidden.action is not None
     assert hidden.action.kind == "swipe"
-    assert hidden.action.label == "向上滑动地图"
-    assert hidden.action.kind != "click"
+    assert hidden.action.label == "向下滑动地图"
+    assert hidden.action.x == hidden.action.x2
+    assert hidden.action.y2 is not None and hidden.action.y is not None
+    assert hidden.action.y2 > hidden.action.y
     assert "浪人岬" in (hidden.action.message or "")
-    assert "坐标" in (hidden.action.message or "")
+    right = click_or_pan_to_place(task, image, clf, LANGREN)
+    assert right.action is not None
+    assert right.action.kind == "swipe"
+    assert right.action.label == "向右滑动地图"
+    assert right.action.y == right.action.y2
+    assert right.action.x2 is not None and right.action.x is not None
+    assert right.action.x2 > right.action.x
+    stopped = click_or_pan_to_place(task, image, clf, LANGREN)
+    assert stopped.status == "halt_missing"
+    assert stopped.action is not None
+    assert stopped.action.kind == "halt"
+    assert "右下角" in (stopped.message or "")
+    assert "已停止" in (stopped.message or "")
 
 
 def test_world_map_button_is_the_plaque_and_matches_both_cities(turn_in, walkthrough, templates):

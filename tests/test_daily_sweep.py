@@ -322,3 +322,98 @@ def test_sweep_leaves_association_after_missing_card(templates):
     assert sweep_task.sweep.place_id == LIANHU.id
     assert sweep_task.recipe.name == "处理毒桶"
     assert sweep_task.phase is Phase.ACCEPT
+
+
+def test_mid_battle_unknown_keeps_waiting_for_victory(templates):
+    """开场「战斗即将开始」消失后，未识别帧要继续等胜利，不能去找大地图。
+
+    实机 MuMu 还没复核这一段。
+    """
+    import time
+
+    from src.tasks import navigation
+    from src.vision.classify import classify_scene
+
+    recipe = get_recipe("“热情”的冒险者")
+    task = DailyCommissionTask(specs=templates, recipe=recipe)
+    task.phase = Phase.IN_BATTLE
+    task.saw_continent = True
+    task.battle_started_at = time.monotonic()
+
+    blank = np.zeros((1920, 1080, 3), dtype=np.uint8)
+    clf = classify_scene(blank, templates)
+    assert clf.scene is Scene.UNKNOWN
+    assert navigation.step(task, blank, clf) is None
+
+    result = task.plan(blank)
+    assert result.status == "waiting_battle"
+    assert result.action is not None
+    assert result.action.kind == "wait"
+    assert "等待大地图" not in (result.message or "")
+    assert "大地图" not in (result.message or "")
+    assert "阿格莱恩" not in (result.message or "")
+    assert "战斗胜利" in (result.message or "")
+    assert "扫荡" in (result.message or "")
+    assert result.action.label != "扫荡"
+    assert result.action.label != "完成"
+
+
+def test_flow_recipe_mid_battle_unknown_also_waits(templates):
+    """有分步流程的委托（如「处理毒桶」）在战斗中认不出画面时，同样继续等胜利。
+
+    实机 MuMu 还没复核这一段。
+    """
+    import time
+
+    from src.tasks import navigation
+    from src.vision.classify import classify_scene
+
+    recipe = get_recipe("处理毒桶")
+    task = DailyCommissionTask(specs=templates, recipe=recipe)
+    task.phase = Phase.IN_BATTLE
+    task.saw_continent = True
+    task.battle_started_at = time.monotonic()
+    if recipe.steps and "battle" in recipe.steps:
+        task.step_index = recipe.steps.index("battle")
+
+    blank = np.zeros((1920, 1080, 3), dtype=np.uint8)
+    clf = classify_scene(blank, templates)
+    assert clf.scene is Scene.UNKNOWN
+    assert navigation.step(task, blank, clf) is None
+
+    result = task.plan(blank)
+    assert result.status == "waiting_battle"
+    assert result.action is not None
+    assert result.action.kind == "wait"
+    assert "等待大地图" not in (result.message or "")
+    assert "大地图" not in (result.message or "")
+    assert "阿格莱恩" not in (result.message or "")
+    assert "战斗胜利" in (result.message or "")
+    assert result.action.label != "扫荡"
+    assert result.action.label != "完成"
+
+
+def test_flow_battle_returns_to_stage_and_keeps_going(templates):
+    """选关页重新出现「离开」时，这一场已经结束，要接着离开，不能一直等下一场胜利。"""
+    by_id = templates_by_id(templates)
+    stage = np.zeros((900, 800, 3), dtype=np.uint8)
+    title = by_id["stage_1_3_title"].image_bgr
+    leave = by_id["stage_leave"].image_bgr
+    stage[20 : 20 + title.shape[0], 20 : 20 + title.shape[1]] = title
+    # 左下，避开中间偏下的「扫荡」。
+    stage[700 : 700 + leave.shape[0], 16 : 16 + leave.shape[1]] = leave
+    recipe = get_recipe("奇怪的魔物")
+    task = DailyCommissionTask(specs=templates, recipe=recipe)
+    task.phase = Phase.IN_BATTLE
+    task.step_index = recipe.steps.index("battle")
+    result = task.plan(stage)
+    assert result.scene is Scene.STAGE_1_3
+    assert result.action is not None
+    assert result.status == "continue"
+    assert result.action.kind == "click"
+    assert result.action.label == "离开"
+    assert "阿格莱恩" not in (result.message or "")
+    assert "等待大地图" not in (result.message or "")
+    assert "战斗胜利" not in (result.message or "")
+    assert result.action.label != "扫荡"
+    assert result.action.label != "完成"

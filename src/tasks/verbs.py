@@ -213,17 +213,22 @@ def accept_listed_card(task: Any, image: Any, clf: Any) -> StepResult:
 
 
 def press_receive(task: Any, image: Any, clf: Any, matches: list[Match]) -> StepResult | None:
-    """任务详情上的「接收」。没有这个按钮时返回 None。"""
+    """任务详情上的「接收」。按钮还在就点，不论这一轮是不是已经点过。
+
+    上一帧点过「接收」会把阶段改成已接取；如果详情还在、按钮也还在，
+    说明没有接上，必须再点，不能去点返回离开。
+    """
     accept = task._require(image, "quest_accept")
-    if accept is None or task.phase is not Phase.ACCEPT:
+    if accept is None:
         return None
-    task.phase = Phase.GO_STAGE
+    if task.phase is Phase.ACCEPT:
+        task.phase = Phase.GO_STAGE
     return task._click_result(
         Scene.QUEST_DETAIL,
         clf,
         _with(matches, accept),
         accept,
-        f"接取委托「{task.recipe.name}」。之后用右上返回关闭详情，等动画再关列表、离开协会。",
+        f"接取委托「{task.recipe.name}」。看见「接收」还在就再点，确认接上后再返回。",
     )
 
 

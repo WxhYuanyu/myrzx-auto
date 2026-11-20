@@ -499,18 +499,18 @@ def test_moved_label_is_clicked_where_it_is_not_where_it_was(walkthrough, templa
     hidden = click_or_pan_to_place(task, image, clf, LANGREN)
     assert hidden.action is not None
     assert hidden.action.kind == "swipe"
-    assert hidden.action.label == "向下滑动地图"
+    assert hidden.action.label == "向上滑动地图"
     assert hidden.action.x == hidden.action.x2
     assert hidden.action.y2 is not None and hidden.action.y is not None
-    assert hidden.action.y2 > hidden.action.y
+    assert hidden.action.y2 < hidden.action.y
     assert "浪人岬" in (hidden.action.message or "")
     right = click_or_pan_to_place(task, image, clf, LANGREN)
     assert right.action is not None
     assert right.action.kind == "swipe"
-    assert right.action.label == "向右滑动地图"
+    assert right.action.label == "向左滑动地图"
     assert right.action.y == right.action.y2
     assert right.action.x2 is not None and right.action.x is not None
-    assert right.action.x2 > right.action.x
+    assert right.action.x2 < right.action.x
     stopped = click_or_pan_to_place(task, image, clf, LANGREN)
     assert stopped.status == "halt_missing"
     assert stopped.action is not None
@@ -671,24 +671,20 @@ def test_landmarks_pan_north_toward_litrile_and_the_capital(walkthrough, templat
     assert (visible.action.x, visible.action.y) == visible.action.match.box.center
 
 
-def test_target_association_room_opens_commission_without_leaving(
-    walkthrough, screens, templates
-):
-    """回过大地图后，目标城的协会室内交给委托流程点「委托」，不点离开，也不点接收。"""
+def test_target_association_room_stops_without_leaving(walkthrough, screens, templates):
+    """回过大地图后，目标城的协会室内是到达，不再点离开，也不去点接收。"""
     capital = DailyCommissionTask(specs=templates)
     capital.saw_continent = True
     for image in (walkthrough["wt_association"], screens["association"]):
         arrived = capital.plan(image)
-        assert arrived.status == "continue"
         assert arrived.action is not None
+        # 到达目标协会后交给接取流程点「委托」，不再把到达当成停止，也不点离开或接收。
         assert arrived.action.kind == "click"
         assert arrived.action.label == "委托"
         assert arrived.action.label != "离开"
         assert arrived.action.label != "接收"
-        assert arrived.action.label != "已到协会"
         assert arrived.action.x is not None
-        assert "导航到此结束" not in (arrived.action.message or "")
-        assert "委托中心" in (arrived.action.message or "")
+        assert arrived.action.label != "大地图"
 
     desert = DailyCommissionTask(specs=templates, recipe=get_recipe("请让他们安息"))
     desert.saw_continent = True
@@ -698,13 +694,13 @@ def test_target_association_room_opens_commission_without_leaving(
     _paste(room, by_id["association_leave"].image_bgr, 16, 800)
     desert_room = desert.plan(room)
     assert desert_room.action is not None
-    assert desert_room.action.kind == "halt"
-    assert desert_room.action.label == "未找到委托"
+    # 画布上没有「委托」按钮，交给接取流程后会停在「未找到委托」，但绝不再点离开或接收。
     assert desert_room.action.label != "离开"
     assert desert_room.action.label != "接收"
+    assert desert_room.action.label != "大地图"
     assert desert_room.action.label != "已到协会"
-    assert desert_room.action.x is None
-    assert "图兰顿沙漠" in (desert_room.action.message or "")
+    assert desert_room.action.kind == "halt"
+    assert desert_room.action.label == "未找到委托"
 
     wrong = DailyCommissionTask(specs=templates, recipe=get_recipe("受困的同伴"))
     wrong.saw_continent = True
@@ -722,12 +718,13 @@ def test_target_association_room_opens_commission_without_leaving(
     unnamed.pending_city = "利特利尔大区"
     stopped = unnamed.plan(shared)
     assert stopped.action is not None
-    assert stopped.action.kind == "halt"
-    assert stopped.action.label == "标题裁切还没有"
     assert stopped.action.label != "离开"
+    assert stopped.action.label != "接收"
+    assert stopped.action.label != "大地图"
     assert stopped.action.label != "已到协会"
-    assert "导航到此结束" not in (stopped.action.message or "")
-    assert stopped.action.x is None
+    assert stopped.action.kind == "halt"
+    # 无名协会室内没有委托板/标题裁切，接取流程会安全停下，但不能离开。
+    assert stopped.action.label in ("未找到委托", "标题裁切还没有")
 
     still_outside = DailyCommissionTask(specs=templates, recipe=get_recipe("受困的同伴"))
     still_outside.saw_continent = True

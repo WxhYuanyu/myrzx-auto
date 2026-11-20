@@ -387,6 +387,36 @@
       "height": 42
     },
     {
+      "id": "quest_bubble_map",
+      "file": "quest_bubble_map.png",
+      "source": "user-region-quest-bubble.png",
+      "crop": [
+        0,
+        0,
+        52,
+        58
+      ],
+      "scene": null,
+      "role": "quest_bubble",
+      "label": "任务对话圈",
+      "click_target": false,
+      "threshold": 0.8,
+      "scales": [
+        0.8,
+        0.9,
+        1.0,
+        1.2,
+        1.4,
+        1.6,
+        1.75,
+        2.0,
+        2.2
+      ],
+      "notes": "地区图上有任务的地点旁边的小对话圈（米色圆底、三个点）。用户提供的实机裁切。只用来辅助找 3-20 等任务点，不要点气泡，要点旁边的旗帜。",
+      "width": 52,
+      "height": 58
+    },
+    {
       "id": "stage_node_basic_09",
       "file": "stage_node_basic_09.png",
       "source": "09_explore_bubble.png",
@@ -2412,6 +2442,32 @@
       ]
     },
     {
+      "id": "langren_evil_prison",
+      "file": "langren_evil_prison.png",
+      "source": "user-evil-prison.png",
+      "crop": [
+        0,
+        18,
+        415,
+        328
+      ],
+      "scene": null,
+      "role": "status",
+      "label": "恶骸之狱",
+      "click_target": false,
+      "threshold": 0.8,
+      "scales": [
+        1.0,
+        0.9,
+        0.95,
+        1.05,
+        1.1
+      ],
+      "notes": "浪人岬地区图上的地下城入口「恶骸之狱」（黑洞、粉红触须和「←恶骸之狱」标签）。只作辅助识别，不要点这个入口。换换口味的 5-5 旗帜就在它的右边；看不见这个地标时，即使旗帜分很高也不能点，以免把 5-9 当成 5-5。用户 2026-11-20 提供的实机裁切，已放大到 1080×1920 尺度，不含右侧 5-5 旗帜。",
+      "width": 415,
+      "height": 310
+    },
+    {
       "id": "npc_strange_bat",
       "file": "npc_strange_bat.png",
       "source": "13-5-5.png",
@@ -2525,26 +2581,36 @@
     {
       "id": "item_suspicious_juice",
       "file": "item_suspicious_juice.png",
-      "source": "user-suspicious-juice.png",
+      "source": "user-bag-juice-with-5.png",
       "crop": [
-        30,
-        15,
-        148,
-        152
+        4,
+        4,
+        96,
+        76
       ],
       "scene": "BAG",
       "role": "status",
       "label": "可疑的果汁",
       "click_target": false,
-      "notes": "「换换口味」所需的可疑的果汁：粉色杯子，蓝框。按背包格子尺寸从用户提供的图标放大，不含右下角数量，以免两瓶以上对不上。只用来判断有没有，不要点击这件物品。",
-      "width": 118,
-      "height": 137,
+      "notes": "「换换口味」所需的可疑的果汁：用户提供的背包实机图标，粉色杯子、蓝框。已去掉右下角数量 5，以免数量不同时对不上。只用来判断有没有，不要点击这件物品。",
+      "width": 92,
+      "height": 72,
       "scales": [
-        1.0,
-        0.95,
-        1.05,
+        0.8,
         0.9,
-        1.1
+        1.0,
+        1.1,
+        1.2,
+        1.3,
+        1.4,
+        1.5,
+        1.6,
+        1.7,
+        1.8,
+        1.9,
+        2.0,
+        2.1,
+        2.2
       ],
       "threshold": 0.8
     },
@@ -2973,6 +3039,1730 @@
       "label": "翡翠之梦",
       "click_target": false,
       "scene": null
+    },
+    {
+      "id": "commission_road_safe_langren",
+      "file": "commission_road_safe_langren.png",
+      "source": "excel-row2/A2-name.png",
+      "crop": [
+        78,
+        15,
+        218,
+        43
+      ],
+      "scene": "COMMISSION_LIST",
+      "role": "click_only",
+      "label": "保证商路畅通",
+      "click_target": true,
+      "threshold": 0.85,
+      "scales": [
+        0.8,
+        0.85,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.15,
+        1.2,
+        1.3
+      ],
+      "notes": "浪人岬低级委托卡片标题「保证商路畅通」，只裁紫色标题，不含立绘、「加急」或报酬。来自用户表格第一行名称图（已缩小），按同类实机标题高度约 50 像素估了 2.0 倍放大到 280×56，未经 1080×1920 实机截图验证。和南赛拉姆同名委托共用标题文字，接取时要靠地点区分。",
+      "width": 280,
+      "height": 56
+    },
+    {
+      "id": "npc_metaya",
+      "file": "npc_metaya.png",
+      "source": "excel-row2/C2-npc.png",
+      "crop": [
+        0,
+        124,
+        74,
+        190
+      ],
+      "scene": null,
+      "role": "click_only",
+      "label": "梅塔娅",
+      "click_target": true,
+      "threshold": 0.85,
+      "scales": [
+        0.8,
+        0.85,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.15,
+        1.2,
+        1.3
+      ],
+      "notes": "浪人岬商店左下老板娘「梅塔娅」的头像，只裁脸和兜帽，去掉右侧对话气泡、上方商品和底部名字牌。来自用户表格裁切（已缩小），按商店界面约 2.0 倍放大到 148×132，未经实机截图验证。要点头像，不要点气泡，也不要点「购买」。scene 留空：Scene 枚举没有商店页。",
+      "width": 148,
+      "height": 132
+    },
+    {
+      "id": "stage_flag_5_a2",
+      "file": "stage_flag_5_a2.png",
+      "source": "excel-row2/D2-battle.png",
+      "crop": [
+        86,
+        86,
+        158,
+        168
+      ],
+      "scene": "STAGE_MAP",
+      "role": "click_target",
+      "label": "5-A2",
+      "click_target": true,
+      "threshold": 0.9,
+      "scales": [
+        0.8,
+        0.85,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.15,
+        1.2,
+        1.3
+      ],
+      "notes": "浪人岬地区 5-A2 旗帜：爪印旗、三星和「5-A2」字样。右侧对话气泡已从裁切里去掉。来自用户表格战斗位置图（已缩小），对照同地区完整旗帜（如 2-20 约 130×200）估了 2.0 倍放大到 144×164，未经实机截图验证。要点旗帜和编号，不要点气泡，也不要点「扫荡」。 实机曾把 5-A5 以 0.856 / scale=1.10 误认成 5-A2，阈值提到 0.90，避免再把 5-A5 或其他 5-A 旗当成 5-A2。",
+      "width": 144,
+      "height": 164
+    },
+    {
+      "id": "stage_5_a2_basic",
+      "file": "stage_5_a2_basic.png",
+      "source": "excel-row2/E2-detail.png",
+      "crop": [
+        22,
+        146,
+        154,
+        216
+      ],
+      "scene": "STAGE_MAP",
+      "role": "click_target",
+      "label": "初步探索",
+      "click_target": true,
+      "click_offset": [
+        0,
+        -18
+      ],
+      "threshold": 0.85,
+      "scales": [
+        0.8,
+        0.85,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.15,
+        1.2,
+        1.3
+      ],
+      "notes": "5-A2 选关页「初步探索」节点：星星和「初步探索」四字，不含上方橙色箭头和岛上对话气泡。来自用户表格详情图（已缩小），对照实机通用「初步探索」文字模板 130×34 估了 1.25 倍放大到 165×88，未经实机截图验证。点击偏向上面的星星。若点星星后直接开打就进战斗，若出现「进入」再点「进入」，绝不点「扫荡」。",
+      "width": 165,
+      "height": 88
+    },
+    {
+      "id": "commission_road_blocker",
+      "file": "commission_road_blocker.png",
+      "source": "excel-row3/A3-name.png",
+      "crop": [
+        76,
+        6,
+        216,
+        31
+      ],
+      "scene": "COMMISSION_LIST",
+      "role": "click_only",
+      "label": "阻碍道路的家伙",
+      "width": 280,
+      "height": 50,
+      "notes": "纳尔本高级委托卡片标题「阻碍道路的家伙」（紫标题，卡面「紧急」、600 金币、20 紫水晶），只裁标题文字。来自用户表格第三行名称图（已缩小），按同类实机标题估 2.0 倍放大到 280×50，未经 1080×1920 实机截图验证。任务日志也复用这一行。",
+      "click_target": true,
+      "threshold": 0.85,
+      "scales": [
+        0.7,
+        0.8,
+        0.85,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.15,
+        1.2,
+        1.3,
+        1.4
+      ]
+    },
+    {
+      "id": "npc_road_blocker",
+      "file": "npc_road_blocker.png",
+      "source": "excel-row3/C3-npc.png",
+      "crop": [
+        2,
+        0,
+        76,
+        64
+      ],
+      "scene": null,
+      "role": "click_only",
+      "label": "年轻的冒险者",
+      "width": 148,
+      "height": 128,
+      "notes": "纳尔本城里离开协会后左下角附近的「冒险者 / 年轻的冒险者」（红发、绿围巾）头像，去掉右侧对话气泡和名字牌。来自用户表格裁切（已缩小），估 2.0 倍放大到 148×128，未经实机截图验证。点头像，不点气泡。scene 留空：纳尔本城内没有对应的 Scene。",
+      "click_target": true,
+      "threshold": 0.85,
+      "scales": [
+        0.7,
+        0.8,
+        0.85,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.15,
+        1.2,
+        1.3,
+        1.4
+      ]
+    },
+    {
+      "id": "stage_flag_7_5",
+      "file": "stage_flag_7_5.png",
+      "source": "excel-row3/D3-battle.png",
+      "crop": [
+        18,
+        16,
+        92,
+        108
+      ],
+      "scene": "STAGE_MAP",
+      "role": "click_target",
+      "label": "7-5",
+      "width": 148,
+      "height": 184,
+      "notes": "纳尔本地区 7-5 旗帜：爪印旗、星星和「7-5」字样，右上对话气泡已从裁切里抹掉。来自用户表格战斗位置图（已缩小），估 2.0 倍放大到 148×184，未经实机截图验证。点旗帜，不点气泡，不点「扫荡」。",
+      "click_target": true,
+      "threshold": 0.85,
+      "scales": [
+        0.7,
+        0.8,
+        0.85,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.15,
+        1.2,
+        1.3,
+        1.4
+      ]
+    },
+    {
+      "id": "stage_7_5_basic",
+      "file": "stage_7_5_basic.png",
+      "source": "excel-row3/E3-detail.png",
+      "crop": [
+        34,
+        138,
+        132,
+        206
+      ],
+      "scene": "STAGE_MAP",
+      "role": "click_target",
+      "label": "初步探索",
+      "width": 137,
+      "height": 95,
+      "click_offset": [
+        0,
+        -16
+      ],
+      "notes": "7-5 选关页「初步探索」节点（7-5-1）：星星和「初步探索」四字，不含上方橙色箭头和岛上对话气泡。来自用户表格详情图（已缩小），对照实机「初步探索」文字宽约 130 估 1.4 倍放大到 137×95，未经实机截图验证。点击偏向星星。点了可能直接开打，也可能只是选中、还要点「进入」；绝不点「扫荡」。",
+      "click_target": true,
+      "threshold": 0.85,
+      "scales": [
+        0.7,
+        0.8,
+        0.85,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.15,
+        1.2,
+        1.3,
+        1.4
+      ]
+    },
+    {
+      "id": "commission_quake_proof",
+      "file": "commission_quake_proof.png",
+      "source": "excel-row4/A4-name.png",
+      "crop": [
+        72,
+        4,
+        214,
+        32
+      ],
+      "scene": "COMMISSION_LIST",
+      "role": "click_only",
+      "label": "地震防范改造",
+      "click_target": true,
+      "threshold": 0.85,
+      "scales": [
+        0.7,
+        0.8,
+        0.85,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.15,
+        1.2,
+        1.3,
+        1.4
+      ],
+      "width": 284,
+      "height": 56,
+      "notes": "南赛拉姆低级委托卡片标题「地震防范改造」，只裁紫色标题，不含立绘、「加急」或报酬。来自用户表格第四行名称图（已缩小），按同类实机标题高度约 50 像素估了 2.0 倍放大到 284×56，未经 1080×1920 实机截图验证。任务日志也复用这一行。"
+    },
+    {
+      "id": "nan_seram_crystal_cave",
+      "file": "nan_seram_crystal_cave.png",
+      "source": "user-crystal-cave.png",
+      "crop": [
+        44,
+        140,
+        206,
+        250
+      ],
+      "scene": null,
+      "role": "status",
+      "label": "结晶矿洞",
+      "click_target": false,
+      "threshold": 0.8,
+      "scales": [
+        0.8,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.2,
+        1.3
+      ],
+      "width": 162,
+      "height": 110,
+      "notes": "南赛拉姆地区图上的地标「结晶矿洞」（矿洞入口和「←结晶矿洞」标签）。只作辅助识别，不要点这个入口。地震防范改造的 4-7 旗帜在它正上方偏左；看不见这个地标时，即使旗帜分很高也不能点，以免把右边的 4-6 当成 4-7。用户 2026-11-20 提供的实机裁切，不含上方 4-7、4-6 旗帜。"
+    },
+    {
+      "id": "stage_flag_4_7",
+      "file": "stage_flag_4_7.png",
+      "source": "user-crystal-cave.png",
+      "crop": [
+        110,
+        16,
+        166,
+        130
+      ],
+      "scene": "STAGE_MAP",
+      "role": "click_target",
+      "label": "4-7",
+      "click_target": true,
+      "threshold": 0.85,
+      "scales": [
+        0.8,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.2,
+        1.3
+      ],
+      "width": 56,
+      "height": 114,
+      "notes": "南赛拉姆地区的 4-7：爪印旗、三星和「4-7」字样，不含右侧对话气泡，也不含右边的 4-6。给「地震防范改造」用。必须先看到下方的「结晶矿洞」，再点它上方带任务对话圈的旗帜。不要点气泡，不要点矿洞，不要点 4-6，也不要点「扫荡」。来自用户提供的实机地标图。"
+    },
+    {
+      "id": "stage_flag_4_6",
+      "file": "stage_flag_4_6.png",
+      "source": "user-crystal-cave.png",
+      "crop": [
+        248,
+        16,
+        321,
+        130
+      ],
+      "scene": "STAGE_MAP",
+      "role": "status",
+      "label": "4-6",
+      "click_target": false,
+      "threshold": 0.85,
+      "scales": [
+        0.8,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.2,
+        1.3
+      ],
+      "width": 73,
+      "height": 114,
+      "notes": "南赛拉姆地区 4-7 右边的 4-6 旗帜，只用来避免误点，不是点击目标。「地震防范改造」不要点 4-6。"
+    },
+    {
+      "id": "npc_dama",
+      "file": "npc_dama.png",
+      "source": "excel-row4/C4-npc.png",
+      "crop": [
+        0,
+        0,
+        74,
+        80
+      ],
+      "scene": "STAGE_MAP",
+      "role": "click_only",
+      "label": "大妈",
+      "click_target": true,
+      "threshold": 0.85,
+      "scales": [
+        0.7,
+        0.8,
+        0.85,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.15,
+        1.2,
+        1.3,
+        1.4
+      ],
+      "width": 148,
+      "height": 160,
+      "notes": "4-7 选关页上的「大妈 / 随处可见的中年主妇」头像，去掉右侧对话气泡和底部名字牌。来自用户表格裁切（已缩小），估 2.0 倍放大到 148×160，未经 1080×1920 实机截图验证。点头像，不点气泡，也不要点「进入」或「扫荡」。这条委托要对话两次，每次都跳过剧情。"
+    },
+    {
+      "id": "commission_make_medicine",
+      "file": "commission_make_medicine.png",
+      "source": "user-make-medicine-card.png",
+      "crop": [
+        80,
+        6,
+        228,
+        36
+      ],
+      "scene": "COMMISSION_LIST",
+      "role": "click_only",
+      "label": "制作药物",
+      "click_target": true,
+      "threshold": 0.85,
+      "scales": [
+        0.7,
+        0.8,
+        0.85,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.15,
+        1.2,
+        1.3,
+        1.4
+      ],
+      "width": 296,
+      "height": 60,
+      "notes": "利特利尔中级委托卡片标题「制作药物」，只裁紫色标题，不含立绘、「紧急」或报酬。来自用户提供的卡片图（已缩小），按同类实机标题高度约 50 像素估了 2.0 倍放大到 296×60，未经 1080×1920 实机截图验证。任务日志也复用这一行。"
+    },
+    {
+      "id": "npc_make_medicine",
+      "file": "npc_make_medicine.png",
+      "source": "user-make-medicine-npc.png",
+      "crop": [
+        0,
+        0,
+        82,
+        76
+      ],
+      "scene": null,
+      "role": "click_only",
+      "label": "冒险者",
+      "click_target": true,
+      "threshold": 0.85,
+      "scales": [
+        0.7,
+        0.8,
+        0.85,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.15,
+        1.2,
+        1.3,
+        1.4
+      ],
+      "width": 164,
+      "height": 152,
+      "notes": "离开利特利尔协会后，城里左下角的「冒险者 / 年轻的冒险者」（红发、绿围巾）头像，去掉右侧对话气泡和底部名字牌。来自用户提供的裁切（已缩小），估 2.0 倍放大到 164×152，未经 1080×1920 实机截图验证。点头像，不点气泡。scene 留空：利特利尔城内没有对应的 Scene。"
+    },
+    {
+      "id": "commission_collect_repair",
+      "file": "commission_collect_repair.png",
+      "source": "excel-row5/A5-name.png",
+      "crop": [
+        74,
+        6,
+        216,
+        34
+      ],
+      "scene": "COMMISSION_LIST",
+      "role": "click_only",
+      "label": "收集维修材料",
+      "click_target": true,
+      "threshold": 0.85,
+      "scales": [
+        0.7,
+        0.8,
+        0.85,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.15,
+        1.2,
+        1.3,
+        1.4
+      ],
+      "width": 284,
+      "height": 56,
+      "notes": "南赛拉姆低级委托卡片标题「收集维修材料」，只裁紫色标题，不含立绘、「加急」或报酬。来自用户表格第五行名称图（已缩小），按同类实机标题高度约 50 像素估了 2.0 倍放大到 284×56，未经 1080×1920 协会列表截图验证。任务日志也复用这一行。"
+    },
+    {
+      "id": "nan_seram_underground_ruins",
+      "file": "nan_seram_underground_ruins.png",
+      "source": "user-nan-seram-region.png",
+      "crop": [
+        276,
+        496,
+        454,
+        602
+      ],
+      "scene": null,
+      "role": "status",
+      "label": "地下遗迹",
+      "click_target": false,
+      "threshold": 0.8,
+      "scales": [
+        0.8,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.2,
+        1.3
+      ],
+      "width": 390,
+      "height": 232,
+      "notes": "南赛拉姆地区图上的地标「地下遗迹」（遗迹入口和「地下遗迹→」标签）。只作辅助识别，不要点这个入口。收集维修材料的 4-2 旗帜在它左边；看不见这个地标时，即使旗帜分很高也不能点，以免把 4-1、4-3 或中间的 4-Z 当成 4-2。用户 2026-11-20 提供的南赛拉姆地区图（493×865），按宽度放大到 1080 后裁切，不含 4-2、4-1、4-3 旗帜和 4-Z。"
+    },
+    {
+      "id": "stage_flag_4_2",
+      "file": "stage_flag_4_2.png",
+      "source": "user-nan-seram-region.png",
+      "crop": [
+        198,
+        610,
+        254,
+        678
+      ],
+      "scene": "STAGE_MAP",
+      "role": "click_target",
+      "label": "4-2",
+      "click_target": true,
+      "threshold": 0.85,
+      "scales": [
+        0.8,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.2,
+        1.3
+      ],
+      "width": 123,
+      "height": 149,
+      "notes": "南赛拉姆地区的 4-2：爪印旗、三星和「4-2」字样，不含对话气泡，也不含下方的 4-1、左边的 4-3 或中间的 4-Z。给「收集维修材料」用。必须先认出右边的「地下遗迹」，再点它左边带任务对话圈的旗帜。不要点气泡，不要点地下遗迹，不要点 4-1、4-3 或 4-Z，也不要点「扫荡」。来自用户 2026-11-20 提供的南赛拉姆地区图，按宽度放大到 1080 后裁切。"
+    },
+    {
+      "id": "stage_flag_4_1",
+      "file": "stage_flag_4_1.png",
+      "source": "user-nan-seram-region.png",
+      "crop": [
+        248,
+        688,
+        306,
+        756
+      ],
+      "scene": "STAGE_MAP",
+      "role": "status",
+      "label": "4-1",
+      "click_target": false,
+      "threshold": 0.85,
+      "scales": [
+        0.8,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.2,
+        1.3
+      ],
+      "width": 127,
+      "height": 149,
+      "notes": "南赛拉姆地区 4-2 下方的 4-1 旗帜，只用来避免误点，不是点击目标。「收集维修材料」不要点 4-1。"
+    },
+    {
+      "id": "stage_flag_4_3",
+      "file": "stage_flag_4_3.png",
+      "source": "user-nan-seram-region.png",
+      "crop": [
+        56,
+        520,
+        120,
+        594
+      ],
+      "scene": "STAGE_MAP",
+      "role": "status",
+      "label": "4-3",
+      "click_target": false,
+      "threshold": 0.85,
+      "scales": [
+        0.8,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.2,
+        1.3
+      ],
+      "width": 140,
+      "height": 162,
+      "notes": "南赛拉姆地区 4-2 左边较远处的 4-3 旗帜，只用来避免误点，不是点击目标。「收集维修材料」不要点 4-3。"
+    },
+    {
+      "id": "npc_repair_worker",
+      "file": "npc_repair_worker.png",
+      "source": "excel-row5/C5-npc.png",
+      "crop": [
+        0,
+        0,
+        76,
+        76
+      ],
+      "scene": "STAGE_MAP",
+      "role": "click_only",
+      "label": "维修工人",
+      "click_target": true,
+      "threshold": 0.85,
+      "scales": [
+        0.7,
+        0.8,
+        0.85,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.15,
+        1.2,
+        1.3,
+        1.4
+      ],
+      "width": 152,
+      "height": 152,
+      "notes": "4-2 选关页上的「维修工人 / 维修升降机的大叔」头像，去掉右侧对话气泡和底部名字牌。来自用户表格第五行裁切（已缩小），估 2.0 倍放大到 152×152，未经 1080×1920 选关页截图验证。点头像，不点气泡，也不要点「进入」或「扫荡」。这条委托要对话两次，每次都跳过剧情。"
+    },
+    {
+      "id": "commission_slime_invasion",
+      "file": "commission_slime_invasion.png",
+      "source": "excel-row6/A6-name.png",
+      "crop": [
+        80,
+        8,
+        208,
+        36
+      ],
+      "scene": "COMMISSION_LIST",
+      "role": "click_only",
+      "label": "史莱姆入侵",
+      "click_target": true,
+      "threshold": 0.85,
+      "scales": [
+        0.7,
+        0.8,
+        0.85,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.15,
+        1.2,
+        1.3,
+        1.4
+      ],
+      "width": 256,
+      "height": 56,
+      "notes": "莉莉托斯低级委托卡片标题「史莱姆入侵」，只裁紫色标题，不含立绘、「加急」或报酬。来自用户表格第六行（第五个任务）名称图（已缩小），按同类实机标题高度约 50 像素估了 2.0 倍放大，未经 1080×1920 协会列表截图验证。任务日志也复用这一行。"
+    },
+    {
+      "id": "npc_slime_youth",
+      "file": "npc_slime_youth.png",
+      "source": "excel-row6/C6-npc.png",
+      "crop": [
+        0,
+        0,
+        74,
+        74
+      ],
+      "scene": "STAGE_MAP",
+      "role": "click_only",
+      "label": "青年",
+      "click_target": true,
+      "threshold": 0.85,
+      "scales": [
+        0.7,
+        0.8,
+        0.85,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.15,
+        1.2,
+        1.3,
+        1.4
+      ],
+      "width": 148,
+      "height": 148,
+      "notes": "1-3 选关页上的「青年 / 年轻的小哥」头像，去掉右侧对话气泡和底部名字牌。来自用户表格第六行裁切（已缩小），估 2.0 倍放大，未经 1080×1920 选关页截图验证。点头像，不点气泡，也不要点「进入」或「扫荡」。这条委托要对话两次，第二次对话后进入战斗。"
+    },
+    {
+      "id": "stage_flag_1_2",
+      "file": "stage_flag_1_2.png",
+      "source": "user-lilitos-region.png",
+      "crop": [
+        530,
+        800,
+        720,
+        990
+      ],
+      "scene": "STAGE_MAP",
+      "role": "status",
+      "label": "1-2",
+      "click_target": false,
+      "threshold": 0.85,
+      "scales": [
+        0.8,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.2,
+        1.3
+      ],
+      "width": 190,
+      "height": 190,
+      "notes": "莉莉托斯地区 1-3 左边的 1-2 旗帜，只用来避免误点，不是点击目标。「史莱姆入侵」不要点 1-2。来自用户 2026-11-20 提供的莉莉托斯地区图，按宽度放大到 1080 后裁切。"
+    },
+    {
+      "id": "stage_flag_1_4",
+      "file": "stage_flag_1_4.png",
+      "source": "user-lilitos-region.png",
+      "crop": [
+        915,
+        820,
+        1078,
+        1005
+      ],
+      "scene": "STAGE_MAP",
+      "role": "status",
+      "label": "1-4",
+      "click_target": false,
+      "threshold": 0.85,
+      "scales": [
+        0.8,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.2,
+        1.3
+      ],
+      "width": 163,
+      "height": 185,
+      "notes": "莉莉托斯地区 1-3 右边的 1-4 旗帜，只用来避免误点，不是点击目标。「史莱姆入侵」不要点 1-4。来自用户 2026-11-20 提供的莉莉托斯地区图，按宽度放大到 1080 后裁切。"
+    },
+    {
+      "id": "commission_hot_spring",
+      "file": "commission_hot_spring.png",
+      "source": "excel-row7/A7-name.png",
+      "crop": [
+        80,
+        8,
+        208,
+        42
+      ],
+      "scene": "COMMISSION_LIST",
+      "role": "click_only",
+      "label": "温泉治疗",
+      "click_target": true,
+      "threshold": 0.85,
+      "scales": [
+        0.7,
+        0.8,
+        0.85,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.15,
+        1.2,
+        1.3,
+        1.4
+      ],
+      "width": 256,
+      "height": 68,
+      "notes": "莉安湖委托卡片标题「温泉治疗」，只裁紫色标题，不含立绘、「紧急」或报酬。来自用户表格第七行（第六个任务）名称图（已缩小），按同类实机标题高度约 50 像素估了 2.0 倍放大，未经 1080×1920 协会列表截图验证。任务日志也复用这一行。"
+    },
+    {
+      "id": "city_tavern",
+      "file": "city_tavern.png",
+      "source": "excel-row7/B7-tavern.png",
+      "crop": [
+        0,
+        50,
+        150,
+        163
+      ],
+      "scene": null,
+      "role": "click_only",
+      "label": "酒馆",
+      "click_target": true,
+      "threshold": 0.85,
+      "scales": [
+        0.7,
+        0.8,
+        0.85,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.15,
+        1.2,
+        1.3,
+        1.4
+      ],
+      "width": 300,
+      "height": 226,
+      "notes": "城里地图上的「酒馆」建筑和招牌字，去掉屋顶上的对话气泡。来自用户表格第七行裁切（已缩小），估 2.0 倍放大，未经莉安湖城内原分辨率整屏验证。点建筑和「酒馆」，不点气泡，也不要点「商店」「协会」「探险」「兑换」。"
+    },
+    {
+      "id": "tavern_title",
+      "file": "tavern_title.png",
+      "source": "user-lianhu-bar.png",
+      "crop": [
+        20,
+        232,
+        395,
+        308
+      ],
+      "scene": null,
+      "role": "status",
+      "label": "莉安湖酒吧",
+      "click_target": false,
+      "threshold": 0.85,
+      "scales": [
+        0.8,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.2,
+        1.3
+      ],
+      "width": 375,
+      "height": 76,
+      "notes": "酒馆室内左上标题「莉安湖酒吧」，只用来确认已经进了酒馆，不是点击目标。来自用户 2026-11-20 提供的莉安湖酒吧整屏，按宽度放大到 1080 后裁切。"
+    },
+    {
+      "id": "tavern_leave",
+      "file": "tavern_leave.png",
+      "source": "user-lianhu-bar.png",
+      "crop": [
+        8,
+        1768,
+        248,
+        1895
+      ],
+      "scene": null,
+      "role": "click_only",
+      "label": "离开",
+      "click_target": true,
+      "threshold": 0.85,
+      "scales": [
+        0.8,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.2,
+        1.3
+      ],
+      "width": 240,
+      "height": 127,
+      "notes": "酒馆室内左下「离开」，和猎人对话并跳过剧情后点它回城。不要点「兑换」「抽蛋」或「时光扭蛋」。来自用户 2026-11-20 莉安湖酒吧整屏，按宽度放大到 1080 后裁切。只在酒馆流程里用。"
+    },
+    {
+      "id": "npc_one_eyed_hunter",
+      "file": "npc_one_eyed_hunter.png",
+      "source": "user-lianhu-bar.png",
+      "crop": [
+        0,
+        1288,
+        148,
+        1410
+      ],
+      "scene": null,
+      "role": "click_only",
+      "label": "独眼猎人",
+      "click_target": true,
+      "threshold": 0.85,
+      "scales": [
+        0.8,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.2,
+        1.3
+      ],
+      "width": 148,
+      "height": 122,
+      "notes": "酒馆里的「独眼猎人 / 强壮的雇佣猎人」头像，去掉右侧对话气泡和底部名字牌。来自用户 2026-11-20 莉安湖酒吧整屏，按宽度放大到 1080 后裁切。点头像，不点气泡，也不要点「驯养师」「兑换」「抽蛋」或「离开」。"
+    },
+    {
+      "id": "npc_tamer",
+      "file": "npc_tamer.png",
+      "source": "user-lianhu-bar.png",
+      "crop": [
+        0,
+        1548,
+        200,
+        1710
+      ],
+      "scene": null,
+      "role": "status",
+      "label": "驯养师",
+      "click_target": false,
+      "threshold": 0.85,
+      "scales": [
+        0.8,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.2,
+        1.3
+      ],
+      "width": 200,
+      "height": 162,
+      "notes": "酒馆里独眼猎人下方的「驯养师」，只用来避免误点，不是点击目标。「温泉治疗」不要点驯养师。来自用户 2026-11-20 莉安湖酒吧整屏，按宽度放大到 1080 后裁切。"
+    },
+    {
+      "id": "npc_hot_spring",
+      "file": "npc_hot_spring.png",
+      "source": "user-lianhu-2-11-stage.png",
+      "crop": [
+        0,
+        1528,
+        248,
+        1618
+      ],
+      "scene": "STAGE_MAP",
+      "role": "click_only",
+      "label": "温泉",
+      "click_target": true,
+      "threshold": 0.85,
+      "scales": [
+        0.8,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.2,
+        1.3
+      ],
+      "width": 248,
+      "height": 90,
+      "notes": "2-11 选关页左下的「温泉 / 热气腾腾的温泉」，含泉水和名称，去掉上方对话气泡。来自用户 2026-11-20 提供的 2-11 选关页整屏，按宽度放大到 1080 后裁切。点温泉，不点气泡，也不要点「进入」「扫荡」「战阵」或「离开」。"
+    },
+    {
+      "id": "stage_flag_2_11",
+      "file": "stage_flag_2_11.png",
+      "source": "user-lianhu-region.png",
+      "crop": [
+        525,
+        995,
+        644,
+        1185
+      ],
+      "scene": "STAGE_MAP",
+      "role": "click_target",
+      "label": "2-11",
+      "click_target": true,
+      "threshold": 0.85,
+      "scales": [
+        0.8,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.2,
+        1.3
+      ],
+      "width": 119,
+      "height": 190,
+      "notes": "莉安湖地区的 2-11 旗帜：爪印旗、三星和「2-11」字样，不含右侧气泡，也不含 2-10 / 2-12。给「温泉治疗」点旗帜用，不点气泡。来自用户 2026-11-20 提供的莉安湖地区图，按宽度放大到 1080 后裁切。"
+    },
+    {
+      "id": "stage_flag_2_10",
+      "file": "stage_flag_2_10.png",
+      "source": "user-lianhu-region.png",
+      "crop": [
+        770,
+        990,
+        1000,
+        1210
+      ],
+      "scene": "STAGE_MAP",
+      "role": "status",
+      "label": "2-10",
+      "click_target": false,
+      "threshold": 0.85,
+      "scales": [
+        0.8,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.2,
+        1.3
+      ],
+      "width": 230,
+      "height": 220,
+      "notes": "莉安湖地区 2-11 右边的 2-10 旗帜，只用来避免误点，不是点击目标。「温泉治疗」不要点 2-10。来自用户 2026-11-20 莉安湖地区图，按宽度放大到 1080 后裁切。"
+    },
+    {
+      "id": "stage_flag_2_12",
+      "file": "stage_flag_2_12.png",
+      "source": "user-lianhu-region.png",
+      "crop": [
+        255,
+        1005,
+        485,
+        1220
+      ],
+      "scene": "STAGE_MAP",
+      "role": "status",
+      "label": "2-12",
+      "click_target": false,
+      "threshold": 0.85,
+      "scales": [
+        0.8,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.2,
+        1.3
+      ],
+      "width": 230,
+      "height": 215,
+      "notes": "莉安湖地区 2-11 左边的 2-12 旗帜，只用来避免误点，不是点击目标。「温泉治疗」不要点 2-12。来自用户 2026-11-20 莉安湖地区图，按宽度放大到 1080 后裁切。"
+    },
+    {
+      "id": "lianhu_wagon_house",
+      "file": "lianhu_wagon_house.png",
+      "source": "user-lianhu-region.png",
+      "crop": [
+        644,
+        750,
+        736,
+        975
+      ],
+      "scene": "STAGE_MAP",
+      "role": "status",
+      "label": "小屋",
+      "click_target": false,
+      "threshold": 0.85,
+      "scales": [
+        0.8,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.2,
+        1.3
+      ],
+      "width": 92,
+      "height": 225,
+      "notes": "莉安湖地区 2-5 右边、2-6 左边的小屋，只给「温泉治疗」找 2-11 做辅助识别，不是点击目标，也不加入全局地区地标。不要点这栋小屋，不要点 2-5 或 2-6。来自用户 2026-11-20 莉安湖地区图，按宽度放大到 1080 后裁切。"
+    },
+    {
+      "id": "quest_bubble_2_11",
+      "file": "quest_bubble_2_11.png",
+      "source": "user-lianhu-region.png",
+      "crop": [
+        655,
+        970,
+        760,
+        1080
+      ],
+      "scene": "STAGE_MAP",
+      "role": "status",
+      "label": "任务气泡",
+      "click_target": false,
+      "threshold": 0.85,
+      "scales": [
+        0.8,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.2,
+        1.3
+      ],
+      "width": 105,
+      "height": 110,
+      "notes": "2-11 旗帜右上的任务对话圈，只给「温泉治疗」在地区图上确认气泡用，不是点击目标，也不加入共用气泡名单。来自用户 2026-11-20 莉安湖地区图，按宽度放大到 1080 后裁切。仍会同时尝试已有的 quest_bubble_map。"
+    },
+    {
+      "id": "commission_road_safe_nan_seram",
+      "file": "commission_road_safe_nan_seram.png",
+      "source": "excel-row8/A8-name.png",
+      "crop": [
+        78,
+        6,
+        226,
+        44
+      ],
+      "scene": "COMMISSION_LIST",
+      "role": "click_only",
+      "label": "保证商路畅通",
+      "click_target": true,
+      "threshold": 0.85,
+      "scales": [
+        0.7,
+        0.8,
+        0.85,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.15,
+        1.2,
+        1.3,
+        1.4
+      ],
+      "width": 296,
+      "height": 76,
+      "notes": "南赛拉姆委托卡片标题「保证商路畅通」，只裁紫色标题，不含立绘、「加急」或报酬。来自用户表格第八行（第七个任务）名称图（已缩小），按同类实机标题高度约 50 像素估了 2.0 倍放大，未经 1080×1920 协会列表截图验证。和浪人岬那条同名委托不是同一条，任务日志也复用这一行。"
+    },
+    {
+      "id": "npc_mejita",
+      "file": "npc_mejita.png",
+      "source": "user-gold-shop.png",
+      "crop": [
+        540,
+        260,
+        875,
+        700
+      ],
+      "scene": null,
+      "role": "click_only",
+      "label": "梅姬塔",
+      "click_target": true,
+      "threshold": 0.85,
+      "scales": [
+        0.8,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.2,
+        1.3
+      ],
+      "width": 335,
+      "height": 440,
+      "notes": "南赛拉姆商店里的「梅姬塔 / 商店的老板娘」头像，去掉「购买全部」「购买」和底部名字牌。来自用户 2026-11-20 提供的金币商店对话整屏，按宽度放大到 1080 后裁切。点头像，不点气泡，也不要点「购买全部」「购买」「离开」「时装」「兑换」或「氪金」。"
+    },
+    {
+      "id": "stage_flag_4_21",
+      "file": "stage_flag_4_21.png",
+      "source": "user-nan-seram-region.png",
+      "crop": [
+        730,
+        1198,
+        852,
+        1416
+      ],
+      "scene": "STAGE_MAP",
+      "role": "click_target",
+      "label": "4-21",
+      "click_target": true,
+      "threshold": 0.85,
+      "scales": [
+        0.8,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.2,
+        1.3
+      ],
+      "width": 122,
+      "height": 218,
+      "notes": "南赛拉姆地区右下的 4-21 旗帜：爪印旗、三星和「4-21」字样，不含右侧气泡，也不含 4-22 / 4-23 / 4-C1。给「保证商路畅通」（南赛拉姆）点旗帜用，不点气泡。来自用户 2026-11-20 提供的南赛拉姆地区图，按宽度放大到 1080 后裁切。进入探索后不用滑动就能看到。"
+    },
+    {
+      "id": "stage_flag_4_22",
+      "file": "stage_flag_4_22.png",
+      "source": "user-nan-seram-region.png",
+      "crop": [
+        548,
+        1290,
+        705,
+        1510
+      ],
+      "scene": "STAGE_MAP",
+      "role": "status",
+      "label": "4-22",
+      "click_target": false,
+      "threshold": 0.85,
+      "scales": [
+        0.8,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.2,
+        1.3
+      ],
+      "width": 157,
+      "height": 220,
+      "notes": "南赛拉姆地区 4-21 左边的 4-22 旗帜，只用来避免误点，不是点击目标。「保证商路畅通」（南赛拉姆）不要点 4-22。来自用户 2026-11-20 南赛拉姆地区图，按宽度放大到 1080 后裁切。"
+    },
+    {
+      "id": "stage_flag_4_23",
+      "file": "stage_flag_4_23.png",
+      "source": "user-nan-seram-region.png",
+      "crop": [
+        330,
+        1420,
+        520,
+        1618
+      ],
+      "scene": "STAGE_MAP",
+      "role": "status",
+      "label": "4-23",
+      "click_target": false,
+      "threshold": 0.85,
+      "scales": [
+        0.8,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.2,
+        1.3
+      ],
+      "width": 190,
+      "height": 198,
+      "notes": "南赛拉姆地区 4-22 左边的 4-23 旗帜，只用来避免误点，不是点击目标。「保证商路畅通」（南赛拉姆）不要点 4-23。来自用户 2026-11-20 南赛拉姆地区图，按宽度放大到 1080 后裁切。"
+    },
+    {
+      "id": "stage_flag_4_c1",
+      "file": "stage_flag_4_c1.png",
+      "source": "user-nan-seram-region.png",
+      "crop": [
+        700,
+        1455,
+        870,
+        1658
+      ],
+      "scene": "STAGE_MAP",
+      "role": "status",
+      "label": "4-C1",
+      "click_target": false,
+      "threshold": 0.85,
+      "scales": [
+        0.8,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.2,
+        1.3
+      ],
+      "width": 170,
+      "height": 203,
+      "notes": "南赛拉姆地区 4-21 下面的 4-C1 旗帜，只用来避免误点，不是点击目标。「保证商路畅通」（南赛拉姆）不要点 4-C1。来自用户 2026-11-20 南赛拉姆地区图，按宽度放大到 1080 后裁切。"
+    },
+    {
+      "id": "nan_seram_c1_house",
+      "file": "nan_seram_c1_house.png",
+      "source": "user-nan-seram-region.png",
+      "crop": [
+        530,
+        1510,
+        695,
+        1700
+      ],
+      "scene": "STAGE_MAP",
+      "role": "status",
+      "label": "小屋",
+      "click_target": false,
+      "threshold": 0.85,
+      "scales": [
+        0.8,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.2,
+        1.3
+      ],
+      "width": 165,
+      "height": 190,
+      "notes": "南赛拉姆地区 4-C1 左边的青顶小屋，只给「保证商路畅通」（南赛拉姆）找 4-21 做辅助识别，不是点击目标，也不加入全局地区地标。不要点这栋小屋，不要点底部「矿洞」「回程」或「探索队」，也不要点「结晶矿洞」。来自用户 2026-11-20 南赛拉姆地区图，按宽度放大到 1080 后裁切。"
+    },
+    {
+      "id": "quest_bubble_4_21",
+      "file": "quest_bubble_4_21.png",
+      "source": "user-nan-seram-region.png",
+      "crop": [
+        852,
+        1188,
+        938,
+        1288
+      ],
+      "scene": "STAGE_MAP",
+      "role": "status",
+      "label": "任务气泡",
+      "click_target": false,
+      "threshold": 0.85,
+      "scales": [
+        0.8,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.2,
+        1.3
+      ],
+      "width": 86,
+      "height": 100,
+      "notes": "4-21 旗帜右上的任务对话圈，只给「保证商路畅通」（南赛拉姆）在地区图上确认气泡用，不是点击目标，也不加入共用气泡名单。来自用户 2026-11-20 南赛拉姆地区图，按宽度放大到 1080 后裁切。仍会同时尝试已有的 quest_bubble_map。"
+    },
+    {
+      "id": "stage_4_21_basic",
+      "file": "stage_4_21_basic.png",
+      "source": "excel-row8/E8-basic.png",
+      "crop": [
+        0,
+        70,
+        163,
+        211
+      ],
+      "scene": "STAGE_MAP",
+      "role": "click_only",
+      "label": "初步探索",
+      "click_target": true,
+      "threshold": 0.85,
+      "scales": [
+        0.7,
+        0.8,
+        0.85,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.15,
+        1.2,
+        1.3,
+        1.4
+      ],
+      "width": 326,
+      "height": 282,
+      "notes": "4-21 选关页的「初步探索」节点：树桩、星星和「初步探索」文字，不含上方对话气泡和橙色箭头。来自用户表格第八行裁切（已缩小），估 2.0 倍放大，未经 1080×1920 选关页整屏验证。点星星和节点，不点气泡，也不要点「扫荡」「进入」以外的按钮，更不要点深入或完全探索。role 用 click_only，避免当成地区图场景标记。"
+    },
+    {
+      "id": "commission_protect_repairman",
+      "file": "commission_protect_repairman.png",
+      "source": "excel-row9/A9-name.png",
+      "crop": [
+        80,
+        8,
+        200,
+        40
+      ],
+      "scene": "COMMISSION_LIST",
+      "role": "click_only",
+      "label": "保护维修工",
+      "click_target": true,
+      "threshold": 0.85,
+      "scales": [
+        0.7,
+        0.8,
+        0.85,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.15,
+        1.2,
+        1.3,
+        1.4
+      ],
+      "width": 240,
+      "height": 64,
+      "notes": "南赛拉姆委托卡片标题「保护维修工」，只裁紫色标题，不含立绘、「加急」或报酬。来自用户表格第九行（第八个任务）名称图（已缩小），按同类实机标题高度约 50 像素估了 2.0 倍放大，未经 1080×1920 协会列表截图验证。任务日志也复用这一行。和「收集维修材料」不是同一条；4-2 旗帜、地下遗迹和维修工人头像沿用已有裁切。"
+    },
+    {
+      "id": "commission_trapped_companion",
+      "file": "commission_trapped_companion.png",
+      "source": "excel-row10/A10-name.png",
+      "crop": [
+        78,
+        6,
+        204,
+        36
+      ],
+      "scene": "COMMISSION_LIST",
+      "role": "click_only",
+      "label": "受困的同伴",
+      "click_target": true,
+      "threshold": 0.85,
+      "scales": [
+        0.7,
+        0.8,
+        0.85,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.15,
+        1.2,
+        1.3,
+        1.4
+      ],
+      "width": 252,
+      "height": 60,
+      "notes": "利特利尔大区委托卡片标题「受困的同伴」，只裁紫色标题，不含立绘、「紧急」或报酬。来自用户表格第十行（第九个任务）名称图（已缩小），按同类实机标题高度约 50 像素估了 2.0 倍放大，未经 1080×1920 协会列表截图验证。任务日志也复用这一行。这条原本就在高级名单里。"
+    },
+    {
+      "id": "npc_trapped_companion",
+      "file": "npc_trapped_companion.png",
+      "source": "excel-row10/C10-npc.png",
+      "crop": [
+        6,
+        0,
+        86,
+        78
+      ],
+      "scene": null,
+      "role": "click_only",
+      "label": "冒险者",
+      "click_target": true,
+      "threshold": 0.85,
+      "scales": [
+        0.7,
+        0.8,
+        0.85,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.15,
+        1.2,
+        1.3,
+        1.4
+      ],
+      "width": 160,
+      "height": 156,
+      "notes": "离开利特利尔协会后，城里协会外的「冒险者 / 年轻的冒险者」头像，去掉右侧对话气泡和底部名字牌。来自用户表格第十行（第九个任务）头像图（已缩小），估 2.0 倍放大，未经 1080×1920 城里整屏验证。点头像，不点气泡。scene 留空：利特利尔城内没有对应的 Scene。和「制作药物」里同名的冒险者不是同一张裁切，不要改那条。"
+    },
+    {
+      "id": "stage_flag_8_b4",
+      "file": "stage_flag_8_b4.png",
+      "source": "user-litril-region.png",
+      "crop": [
+        538,
+        1090,
+        652,
+        1284
+      ],
+      "scene": "STAGE_MAP",
+      "role": "click_only",
+      "label": "8-B4",
+      "click_target": true,
+      "threshold": 0.85,
+      "scales": [
+        0.8,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.2,
+        1.3
+      ],
+      "width": 114,
+      "height": 194,
+      "notes": "利特利尔大区地区的 8-B4：爪印旗、三星和「8-B4」字样，不含对话气泡，也不含上方的 8-D5、右边的 8-D4、左边的 8-C1 或左侧木瞭望塔。给「受困的同伴」点旗帜用，不点气泡。必须先认出它左上方的木瞭望塔，再点塔下方带任务对话圈的旗帜。来自用户 2026-11-20 提供的利特利尔大区地区图，按宽度放大到 1080 后裁切。默认视角看不见时，往右轻轻划一下（手指从屏幕右边缘滑到左边缘，屏幕内容往右），只划一次，还没有就停。"
+    },
+    {
+      "id": "stage_flag_8_d5",
+      "file": "stage_flag_8_d5.png",
+      "source": "user-litril-region.png",
+      "crop": [
+        500,
+        760,
+        680,
+        940
+      ],
+      "scene": "STAGE_MAP",
+      "role": "status",
+      "label": "8-D5",
+      "click_target": false,
+      "threshold": 0.85,
+      "scales": [
+        0.8,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.2,
+        1.3
+      ],
+      "width": 180,
+      "height": 180,
+      "notes": "利特利尔大区 8-B4 上方的 8-D5 旗帜，只用来避免误点，不是点击目标。「受困的同伴」不要点 8-D5。来自用户 2026-11-20 利特利尔大区地区图，按宽度放大到 1080 后裁切。"
+    },
+    {
+      "id": "stage_flag_8_d4",
+      "file": "stage_flag_8_d4.png",
+      "source": "user-litril-region.png",
+      "crop": [
+        820,
+        760,
+        980,
+        940
+      ],
+      "scene": "STAGE_MAP",
+      "role": "status",
+      "label": "8-D4",
+      "click_target": false,
+      "threshold": 0.85,
+      "scales": [
+        0.8,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.2,
+        1.3
+      ],
+      "width": 160,
+      "height": 180,
+      "notes": "利特利尔大区 8-B4 右上方的 8-D4 旗帜，只用来避免误点，不是点击目标。「受困的同伴」不要点 8-D4。来自用户 2026-11-20 利特利尔大区地区图，按宽度放大到 1080 后裁切。"
+    },
+    {
+      "id": "stage_flag_8_c1",
+      "file": "stage_flag_8_c1.png",
+      "source": "user-litril-region.png",
+      "crop": [
+        0,
+        1180,
+        200,
+        1400
+      ],
+      "scene": "STAGE_MAP",
+      "role": "status",
+      "label": "8-C1",
+      "click_target": false,
+      "threshold": 0.85,
+      "scales": [
+        0.8,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.2,
+        1.3
+      ],
+      "width": 200,
+      "height": 220,
+      "notes": "利特利尔大区 8-B4 左边的 8-C1 旗帜，只用来避免误点，不是点击目标。「受困的同伴」不要点 8-C1。来自用户 2026-11-20 利特利尔大区地区图，按宽度放大到 1080 后裁切。"
+    },
+    {
+      "id": "litril_b4_tower",
+      "file": "litril_b4_tower.png",
+      "source": "user-litril-region.png",
+      "crop": [
+        452,
+        944,
+        548,
+        1112
+      ],
+      "scene": "STAGE_MAP",
+      "role": "status",
+      "label": "瞭望塔",
+      "click_target": false,
+      "threshold": 0.85,
+      "scales": [
+        0.8,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.2,
+        1.3
+      ],
+      "width": 96,
+      "height": 168,
+      "notes": "利特利尔大区 8-B4 左上方的木瞭望塔，只给「受困的同伴」找 8-B4 做辅助识别，不是点击目标，也不加入全局地区地标。不要点这座塔，不要点底部「矿洞」「回程」或「探索队」。来自用户 2026-11-20 利特利尔大区地区图，按宽度放大到 1080 后裁切。真 8-B4 在它下方稍偏右。"
+    },
+    {
+      "id": "quest_bubble_8_b4",
+      "file": "quest_bubble_8_b4.png",
+      "source": "excel-row10/D10-8b4.png",
+      "crop": [
+        100,
+        6,
+        128,
+        40
+      ],
+      "scene": "STAGE_MAP",
+      "role": "status",
+      "label": "任务气泡",
+      "click_target": false,
+      "threshold": 0.85,
+      "scales": [
+        0.7,
+        0.8,
+        0.85,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.15,
+        1.2,
+        1.3,
+        1.4
+      ],
+      "width": 56,
+      "height": 68,
+      "notes": "8-B4 旗帜右侧的任务对话圈，只给「受困的同伴」在地区图上确认气泡用，不是点击目标，也不加入共用气泡名单。来自用户表格第十行（第九个任务）8-B4 图（已缩小），估 2.0 倍放大。用户 2026-11-20 的利特利尔大区地区图里这帧没有气泡，所以不从那张图裁。仍会同时尝试已有的 quest_bubble_map。"
+    },
+    {
+      "id": "stage_8_b4_basic",
+      "file": "stage_8_b4_basic.png",
+      "source": "excel-row10/E10-basic.png",
+      "crop": [
+        8,
+        82,
+        150,
+        216
+      ],
+      "scene": "STAGE_MAP",
+      "role": "click_only",
+      "label": "初步探索",
+      "click_target": true,
+      "threshold": 0.85,
+      "scales": [
+        0.7,
+        0.8,
+        0.85,
+        0.9,
+        0.95,
+        1.0,
+        1.05,
+        1.1,
+        1.15,
+        1.2,
+        1.3,
+        1.4
+      ],
+      "width": 284,
+      "height": 268,
+      "notes": "8-B4 选关页的「初步探索」节点：草地、树桩、星星和「初步探索」文字，不含上方对话气泡和橙色箭头。来自用户表格第十行（第九个任务）裁切（已缩小），估 2.0 倍放大，未经 1080×1920 选关页整屏验证。点星星和节点，不点气泡，也不要点「扫荡」。出现「进入」再点「进入」。不要改点深入或完全探索。role 用 click_only，避免当成地区图场景标记。"
     }
   ],
   "notes": "旧模板多从 tests/fixtures/screens 的局部裁切图取得；类型1全程在 tests/fixtures/walkthrough；类型2交物品在 tests/fixtures/turn_in；类型3多场战斗在 tests/fixtures/multi_battle。带 scales 的全分辨率模板只扫列出的尺度。喳喳布林入侵按屏幕原文。任何模板都不用于点击「扫荡」。"

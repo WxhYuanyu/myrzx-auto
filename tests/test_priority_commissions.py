@@ -211,9 +211,10 @@ def test_youth_and_3_20_crops_are_clicked_and_3_23_does_not_reuse_3_20(templates
 def test_enter_3_20_does_not_click_flag_1_3(walkthrough, templates):
     result = _at(_task(templates, "奇怪的魔物"), "enter_3_20").plan(walkthrough["wt_stage_map"])
     assert result.action is not None
-    assert result.action.kind == "halt"
+    assert result.action.kind == "swipe"
     assert result.action.label != "1-3"
     assert "3-20" in result.message
+    assert "3-23" in (result.message or "")
 
 
 def test_stage_flags_that_are_not_cropped_halt(walkthrough, templates):
@@ -232,13 +233,12 @@ def test_stage_flags_that_are_not_cropped_halt(walkthrough, templates):
     assert "扫荡" in flower.message
     assert flower.action.label != "1-3"
 
-    spring = _at(_task(templates, "温泉治疗"), "talk_on_stage").plan(
+    spring = _at(_task(templates, "温泉治疗"), "find_2_11").plan(
         np.zeros((200, 200, 3), dtype=np.uint8)
     )
     assert spring.status == "halt_missing"
     assert "2-11" in spring.message
-    assert "裁切" in spring.message
-    assert "协会大叔" in spring.message
+    assert "扫荡" in spring.message
     assert spring.action is not None and spring.action.kind == "halt"
 
     road = _at(_task(templates, "阻碍道路的家伙"), "fight_7_5_1").plan(
@@ -249,7 +249,7 @@ def test_stage_flags_that_are_not_cropped_halt(walkthrough, templates):
     assert "初步" in road.message
     assert "扫荡" in road.message
 
-    trapped = _at(_task(templates, "受困的同伴"), "fight_8_b4_basic").plan(
+    trapped = _at(_task(templates, "受困的同伴"), "find_8_b4").plan(
         np.zeros((200, 200, 3), dtype=np.uint8)
     )
     assert trapped.status == "halt_missing"
@@ -259,7 +259,8 @@ def test_stage_flags_that_are_not_cropped_halt(walkthrough, templates):
 
 
 def test_missing_card_does_not_click_another_quest(turn_in, templates):
-    task = _task(templates, "温泉治疗")
+    # 温泉治疗已经有标题裁切。仍缺裁切的「冒险小队寻求支援」不能改点别的卡。
+    task = _task(templates, "冒险小队寻求支援")
     result = task.plan(turn_in["commission"])
     assert result.status == "halt_missing"
     assert result.action is not None

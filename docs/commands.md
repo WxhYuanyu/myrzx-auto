@@ -61,7 +61,14 @@ cd E:\myrzx-auto\myrzx-auto-main
 .\.venv\Scripts\python.exe main.py --live --quest “热情”的冒险者
 ```
 
-两个「保证商路畅通」按地图区分（浪人岬 / 南赛拉姆）。表里的「仇恨令我成长」「热情的冒险者」也会认成游戏标题。未知名称会直接停止，不会编造路线。
+同名委托必须加 `--location`，否则会拒绝，不会随便挑一条。两个「保证商路畅通」分别是浪人岬和南赛拉姆：
+
+```powershell
+.\.venv\Scripts\python.exe main.py --live --quest 保证商路畅通 --location 南赛拉姆
+.\.venv\Scripts\python.exe main.py --live --quest 保证商路畅通 --location 浪人岬
+```
+
+表里的「仇恨令我成长」「热情的冒险者」也会认成游戏标题。未知名称会直接停止，不会编造路线。
 
 已经接取之后如果要从某个阶段接着跑，可以加 `--phase`，例如 `GO_STAGE`。一般不必用。
 

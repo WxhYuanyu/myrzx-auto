@@ -224,36 +224,47 @@ HOT_SPRING = CommissionRecipe(
     name="温泉治疗",
     kind=CommissionKind.BATTLE,
     card_template="commission_hot_spring",
-    log_template="quest_log_hot_spring",
+    log_template="commission_hot_spring",
     objective_template=None,
     npc_template="npc_hot_spring",
-    objective_text="在莉安湖关卡 2-11 上与任务 NPC 对话后战斗",
+    objective_text="在莉安湖酒馆与独眼猎人对话，再去 2-11 与温泉对话后战斗",
     location=LIANHU,
     stage_flag_template="stage_flag_2_11",
     stage_label="2-11",
-    awaiting_crops=frozenset(
-        {
-            "commission_hot_spring",
-            "quest_log_hot_spring",
-            "npc_hot_spring",
-            "stage_flag_2_11",
-        }
-    ),
-    flow="lianhu_stage_talk",
+    awaiting_crops=frozenset(),
+    flow="lianhu_hot_spring",
     steps=(
         "accept_board",
         "leave_association",
+        "enter_tavern",
+        "talk_hunter",
+        "skip_story",
+        "leave_tavern",
         "explore",
-        "fight_stage",
+        "find_2_11",
         "talk_on_stage",
         "skip_story",
+        "skip_in_battle",
         "battle",
+        "skip_story",
         "claim",
     ),
     summary=(
-        "温泉治疗：莉安湖接取后离开协会，到关卡 2-11 上点任务 NPC 的脸"
-        "（不在协会里），跳过剧情后在同一关战斗。标题和脸的裁切还没有。"
+        "温泉治疗：莉安湖协会接取后离开，先在城里点「酒馆」（不点气泡、商店、协会或探险），"
+        "进酒吧后点「独眼猎人 / 强壮的雇佣猎人」的头像（不点气泡，也不点「驯养师」「兑换」「抽蛋」），跳过剧情，再点左下「离开」回城。"
+        "然后点「探险」进莉安湖地区。2-11 在地图中间；看不见时按住左边缘划到中间（屏幕内容往右），"
+        "不要用从中间划到边缘的轻轻划，也不要大划。划完后 2-11 会在画面中间。"
+        "必须先认出 2-5 右边、2-6 左边的小屋，再点它下方带任务对话圈的 2-11 旗帜。"
+        "不要点小屋，不要点气泡，不要点左边的 2-12、右边的 2-10、上面的 2-5 或 2-6，也不要点「扫荡」。"
+        "看不见小屋时，即使旗帜分很高也不点。划过仍同时看不到小屋和带对话圈的 2-11，就停下。"
+        "进 2-11 选关页后点左下「温泉」（不要点气泡、进入、扫荡或战阵），跳过剧情后进入战斗。"
+        "进战斗后再跳过一次剧情；表格里这场大约 10 秒后会出现跳过，只针对这条委托，不会把 10 秒套到其他委托上。"
+        "仍等到「战斗胜利」；战斗结束后还要再跳过一次剧情。"
+        "单条跑完不点「完成」，六次都做完后用 --live --claim 一起领。"
+        "标题和酒馆入口来自表格裁切并按实机尺寸估了缩放；独眼猎人、温泉、2-11 旗帜和小屋来自用户提供的酒吧、选关页和莉安湖地区图。"
+        "这条原本就在高级名单里，没有改成低级。"
     ),
+    tier=CommissionTier.HIGH,
 )
 
 STRANGE_BEAST = CommissionRecipe(
@@ -302,36 +313,38 @@ ROAD_BLOCKER = CommissionRecipe(
     name="阻碍道路的家伙",
     kind=CommissionKind.BATTLE,
     card_template="commission_road_blocker",
-    log_template="quest_log_road_blocker",
+    # 没有任务日志的标题裁切，和处理毒桶一样复用卡片标题。
+    log_template="commission_road_blocker",
     objective_template=None,
     npc_template="npc_road_blocker",
-    objective_text="纳尔本接取后与任务 NPC 对话，再打 7-5-1",
+    objective_text="纳尔本接取后在城里和「年轻的冒险者」对话，再打 7-5-1",
     location=NAR,
     stage_flag_template="stage_flag_7_5",
     stage_node="basic",
     stage_label="7-5-1",
-    awaiting_crops=frozenset(
-        {
-            "commission_road_blocker",
-            "quest_log_road_blocker",
-            "npc_road_blocker",
-            "stage_flag_7_5",
-        }
-    ),
+    awaiting_crops=frozenset(),
     flow="narben_type1",
     steps=(
         "accept_board",
         "leave_association",
-        "explore",
-        "talk_task_npc",
+        "city_talk",
         "skip_story",
+        "explore",
         "fight_7_5_1",
         "battle",
+        "leave_stage",
         "claim",
     ),
     summary=(
-        "阻碍道路的家伙：克里斯汀的纳尔本，标准类型1，战斗是 7-5-1（初步探索）。"
-        "标题、NPC 和关卡裁切还没有。"
+        "阻碍道路的家伙：克里斯汀的纳尔本。协会接取后离开协会，城里画面左下角附近会出现"
+        "「冒险者 / 年轻的冒险者」（红发、绿围巾），点他的头像（不点气泡、不点名字牌）对话，"
+        "不用先进探险。跳过剧情后稍微按住「探险」进纳尔本地区。7-5 在地图中下，"
+        "看不见就把右边拉进画面（手指左滑，屏幕内容往右），每滑一次先找旗帜，"
+        "画面不再移动或到安全次数就停下。点 7-5 的旗帜和编号，不点气泡。"
+        "选关页点「初步探索」的星星（7-5-1）：若直接开打就打，若只是选中就再点「进入」，"
+        "绝不点「扫荡」。战斗后离开选关，不回去找冒险者，单条不点「完成」，"
+        "六次都做完后用 --claim 一起领。标题、头像、7-5 旗帜和初步探索节点来自表格裁切，"
+        "按实机尺寸估了缩放，还没有用实机截图核对。"
     ),
 )
 
@@ -340,37 +353,43 @@ TRAPPED_COMPANION = CommissionRecipe(
     name="受困的同伴",
     kind=CommissionKind.BATTLE,
     card_template="commission_trapped_companion",
-    log_template="quest_log_trapped_companion",
+    log_template="commission_trapped_companion",
     objective_template=None,
     npc_template="npc_trapped_companion",
-    objective_text="利特利尔大区清 8-B4 初步探索",
+    objective_text="离开利特利尔协会后，在城里协会外与冒险者对话，再清 8-B4 初步探索",
     location=LITRILE,
     stage_flag_template="stage_flag_8_b4",
     stage_node="basic",
     stage_label="8-B4",
-    awaiting_crops=frozenset(
-        {
-            "commission_trapped_companion",
-            "quest_log_trapped_companion",
-            "npc_trapped_companion",
-            "stage_flag_8_b4",
-        }
-    ),
-    flow="litrile_type1",
+    awaiting_crops=frozenset(),
+    flow="litrile_trapped_companion",
     steps=(
         "accept_board",
         "leave_association",
-        "explore",
-        "talk_task_npc",
+        "city_talk",
         "skip_story",
-        "fight_8_b4_basic",
+        "explore",
+        "find_8_b4",
+        "enter_8_b4_basic",
         "battle",
+        "skip_story",
         "claim",
     ),
     summary=(
-        "受困的同伴：利特利尔大区在克里斯汀西侧，标准类型1，清 8-B4 初步探索"
-        "（不是深入或完全）。大地图上看见「利特利尔大区」再点，不编造坐标。"
+        "受困的同伴：利特利尔大区接取的高级战斗委托。"
+        "协会接取后离开，在城里协会外点「冒险者 / 年轻的冒险者」头像（不点气泡），"
+        "跳过剧情，再点「探险」。8-B4 在地区图中下、河岸边；必须先认出它左上方的木瞭望塔，"
+        "再点塔下方带任务对话圈的 8-B4 旗帜。不点瞭望塔、气泡、8-D5、8-D4、8-C1，"
+        "也不要点底部「矿洞」「回程」「探索队」或「扫荡」。看不见就往右轻轻划一下"
+        "（手指从屏幕右边缘滑到左边缘，屏幕内容往右），只划这一次，还没有就停。"
+        "进 8-B4 点「初步探索」的星星，战斗自己开始就进入战斗，"
+        "出现「进入」再点「进入」，不点扫荡。战斗胜利并领取战斗奖励之后会出现对话，"
+        "再点「跳过剧情」。不点「完成」，六次后用 --live --claim 一起领。"
+        "这条原本就在高级名单里，不要改成中级或低级。"
+        "标题、冒险者头像和初步探索来自表格裁切，并按实机尺寸估了缩放；"
+        "8-B4 旗帜和木瞭望塔来自用户 2026-11-20 提供的利特利尔大区地区图。"
     ),
+    tier=CommissionTier.HIGH,
 )
 
 LET_THEM_REST = CommissionRecipe(
@@ -469,7 +488,7 @@ CHANGE_TASTE = CommissionRecipe(
         "accept_board",
         "leave_association",
         "explore",
-        "fight_stage",
+        "fight_5_5",
         "talk_on_stage",
         "skip_story",
         "claim",
@@ -480,8 +499,9 @@ CHANGE_TASTE = CommissionRecipe(
         "接取前先打开背包「道具」页确认有可疑的果汁：有才点「接收」，没有就不接。"
         "扫城时跳过这条且不占用每日次数；单独 --quest 则停下说明没有果汁。"
         "详情页在接收前看不到所需物品，所以必须先查背包。怎么获得果汁还没走查，不会去打关或猜商店。"
-        "离开协会后点城里「探险」进浪人岬地区；5-5 默认画面上常常看不见，"
-        "要平移地区图直到看见旗帜再点，不要点旁边的对话气泡，也不要点「扫荡」。"
+        "离开协会后点城里「探险」进浪人岬地区。5-5 在地区图右下角偏左，紧挨在「恶骸之狱」右边，默认常常看不见；"
+        "先往南再往东平移（看画面还动不动判断到边），必须同时看到「恶骸之狱」、它右边的 5-5 旗帜和旁边的任务对话圈才点旗帜。看不见恶骸之狱时，即使旗帜分很高也不点，以免再把 5-9 当成 5-5。"
+        "5-A5、5-A2 这类旗长得很像，不能因为像 5-A2 或过了阈值就点。不要点「恶骸之狱」，不要点气泡，也不要点「扫荡」。"
         "进 5-5 选关页后点左下「奇怪的蝙蝠」的头像（不要点气泡），再跳过剧情即可上交。"
         "单条跑完不点「完成」，六次都做完后用 --claim 一起领。"
     ),
@@ -490,14 +510,33 @@ CHANGE_TASTE = CommissionRecipe(
     required_item_name="可疑的果汁",
 )
 
-MAKE_MEDICINE = _pending_recipe(
+MAKE_MEDICINE = CommissionRecipe(
     quest_id="make_medicine",
     name="制作药物",
-    kind=CommissionKind.BATTLE,
+    kind=CommissionKind.TURN_IN,
+    card_template="commission_make_medicine",
+    log_template="commission_make_medicine",
+    objective_template=None,
+    npc_template="npc_make_medicine",
+    objective_text="离开利特利尔协会后，在城里左下角与冒险者对话",
     location=LITRILE,
+    awaiting_crops=frozenset(),
+    flow="litrile_make_medicine",
+    steps=(
+        "accept_board",
+        "leave_association",
+        "city_talk",
+        "skip_story",
+        "claim",
+    ),
+    summary=(
+        "制作药物：利特利尔大区协会接取的中级交物品委托。"
+        "接取后离开协会，城里左下角就会看到「冒险者 / 年轻的冒险者」。"
+        "点头像，不要点旁边的气泡。跳过剧情后这条就结束了，不打关，也不用再去探险。"
+        "单条跑完不点「完成」，六次都做完后用 --live --claim 一起领。"
+        "标题和冒险者头像来自用户提供的裁切，并按实机尺寸估了缩放，还没有用 1080×1920 实机截图核对。"
+    ),
     tier=CommissionTier.MEDIUM,
-    objective_text="利特利尔大区的中级委托。任务要求还没补全。",
-    summary="制作药物：图8 利特利尔大区的中级委托。流程还没实机走查，不会瞎点。",
 )
 
 ADVENTURE_SQUAD = _pending_recipe(
@@ -517,53 +556,275 @@ ADVENTURE_SQUAD = _pending_recipe(
     ),
 )
 
-ROAD_SAFE_LANGREN = _pending_recipe(
+_ROAD_SAFE_LANGREN_STEPS = (
+    "accept_board",
+    "leave_association",
+    "enter_shop",
+    "talk_metaya",
+    "skip_story",
+    "leave_shop",
+    "explore",
+    "fight_5_a2",
+    "enter_5_a2_basic",
+    "battle",
+    "leave_stage",
+    "claim",
+)
+
+ROAD_SAFE_LANGREN = CommissionRecipe(
     quest_id="road_safe_langren",
     name="保证商路畅通",
     kind=CommissionKind.BATTLE,
+    card_template="commission_road_safe_langren",
+    log_template="commission_road_safe_langren",
+    objective_template=None,
+    npc_template="npc_metaya",
+    objective_text="在浪人岬商店与梅塔娅对话，再通关 5-A2 初步探索",
     location=LANGREN,
-    tier=CommissionTier.LOW,
-    objective_text="接委托后通关 5-A2 初步探索",
     stage_flag_template="stage_flag_5_a2",
     stage_node="basic",
     stage_label="5-A2",
+    awaiting_crops=frozenset(),
+    flow="langren_road_safe",
+    steps=_ROAD_SAFE_LANGREN_STEPS,
     summary=(
-        "保证商路畅通（浪人岬）：图5 的低级委托，通关 5-A2 初步探索。"
-        "和南赛拉姆那条同名委托不是同一条。流程还没实机走查，不会瞎点。"
+        "保证商路畅通（浪人岬）：浪人岬协会接取后离开，先在城里点「商店」建筑"
+        "（不是右上背包），进店后点左下老板娘「梅塔娅」的头像，不要点她旁边的气泡，"
+        "也不要点「购买」或任何商品。跳过剧情后点商店左下「离开」回城，再点「探险」"
+        "进浪人岬地区。5-A2 在地图中上部，默认常常看不见；看不见时从屏幕中间往左边缘"
+        "轻轻滑（手指往左，屏幕内容往右），每滑一次先找旗帜，看见就点，不要固定只滑两下。"
+        "若滑了两下还没有，画面还在动就再试几次，到边还没有就停下说明。点 5-A2 的旗帜"
+        "和编号，不要点旁边的对话气泡，也不要点「扫荡」。进选关页后点「初步探索」的星星；"
+        "若点星星直接开打就进战斗，若出现「进入」再点「进入」，绝不点「扫荡」。"
+        "战斗结束后离开选关。单条跑完不点「完成」，六次都做完后用 --live --claim 一起领。"
+        "和南赛拉姆那条同名委托不是同一条。标题、梅塔娅头像、5-A2 旗帜和初步探索节点"
+        "来自表格裁切并按实机尺寸估了缩放，还没有用 1080×1920 实机截图核对。"
     ),
+    tier=CommissionTier.LOW,
 )
 
-PROTECT_REPAIRMAN = _pending_recipe(
+
+QUAKE_PROOF = CommissionRecipe(
+    quest_id="quake_proof",
+    name="地震防范改造",
+    kind=CommissionKind.TURN_IN,
+    card_template="commission_quake_proof",
+    log_template="commission_quake_proof",
+    objective_template=None,
+    npc_template="npc_dama",
+    objective_text="在南赛拉姆 4-7 与大妈对话两次",
+    location=NAN_SERAM,
+    stage_flag_template="stage_flag_4_7",
+    stage_label="4-7",
+    awaiting_crops=frozenset(),
+    flow="nan_seram_quake_proof",
+    steps=(
+        "accept_board",
+        "leave_association",
+        "explore",
+        "find_4_7",
+        "talk_on_stage",
+        "skip_story",
+        "talk_on_stage",
+        "skip_story",
+        "claim",
+    ),
+    summary=(
+        "地震防范改造：南赛拉姆协会接取的低级委托。"
+        "离开协会后点城里「探险」进南赛拉姆地区。4-7 在地区图最左边、结晶矿洞正上方偏左，"
+        "进入后无需滑动就能看到。必须先认出地标「结晶矿洞」，再点它上方带任务对话圈的 4-7 旗帜。"
+        "不要点「结晶矿洞」，不要点右边的 4-6，不要点气泡，也不要点「扫荡」。"
+        "看不见结晶矿洞时，即使旗帜分很高也不点。默认视角下如果同时看不到矿洞和 4-7，就停下，不要自己编滑动方向。"
+        "进 4-7 选关页后点左下「大妈」的头像（不要点气泡、进入或扫荡），跳过剧情；"
+        "然后再点一次大妈的头像并再跳过一次剧情。这条要对话两次，不是一次。"
+        "单条跑完不点「完成」，六次都做完后用 --live --claim 一起领。"
+        "标题和大妈头像来自表格裁切并按实机尺寸估了缩放，结晶矿洞和 4-7、4-6 来自用户提供的实机地标图。"
+    ),
+    tier=CommissionTier.LOW,
+)
+
+COLLECT_REPAIR = CommissionRecipe(
+    quest_id="collect_repair",
+    name="收集维修材料",
+    kind=CommissionKind.TURN_IN,
+    card_template="commission_collect_repair",
+    log_template="commission_collect_repair",
+    objective_template=None,
+    npc_template="npc_repair_worker",
+    objective_text="在南赛拉姆 4-2 与维修工人对话两次",
+    location=NAN_SERAM,
+    stage_flag_template="stage_flag_4_2",
+    stage_label="4-2",
+    awaiting_crops=frozenset(),
+    flow="nan_seram_collect_repair",
+    steps=(
+        "accept_board",
+        "leave_association",
+        "explore",
+        "find_4_2",
+        "talk_on_stage",
+        "skip_story",
+        "talk_on_stage",
+        "skip_story",
+        "claim",
+    ),
+    summary=(
+        "收集维修材料：南赛拉姆协会接取的低级委托。"
+        "离开协会后点城里「探险」进南赛拉姆地区。4-2 在地区图最右边、地下遗迹左边，"
+        "进探索后如果看不见，就往右大划（手指左滑，划到底），把右边拉进画面。"
+        "到边靠画面还动不动判断，到了右边界还没有就停下，不要自己编别的滑动方向。"
+        "必须先认出地标「地下遗迹」，再点它左边带任务对话圈的 4-2 旗帜。"
+        "不要点「地下遗迹」，不要点气泡，不要点下方的 4-1、左边的 4-3 或中间的 4-Z，也不要点「扫荡」。"
+        "看不见地下遗迹时，即使旗帜分很高也不点。"
+        "进 4-2 选关页后点左下「维修工人 / 维修升降机的大叔」的头像（不要点气泡、进入或扫荡），跳过剧情；"
+        "然后再点一次维修工人的头像并再跳过一次剧情。这条要对话两次，不是一次。"
+        "单条跑完不点「完成」，六次都做完后用 --live --claim 一起领。"
+        "标题和维修工人头像来自表格裁切并按实机尺寸估了缩放，地下遗迹和 4-2、4-1、4-3 来自用户提供的南赛拉姆地区图。"
+    ),
+    tier=CommissionTier.LOW,
+)
+
+
+
+SLIME_INVASION = CommissionRecipe(
+    quest_id="slime_invasion",
+    name="史莱姆入侵",
+    kind=CommissionKind.BATTLE,
+    card_template="commission_slime_invasion",
+    log_template="commission_slime_invasion",
+    objective_template=None,
+    npc_template="npc_slime_youth",
+    objective_text="在莉莉托斯 1-3 与青年对话两次后战斗",
+    location=LILITOS,
+    stage_flag_template="stage_flag_1_3",
+    stage_label="1-3",
+    awaiting_crops=frozenset(),
+    flow="lilitos_slime_invasion",
+    steps=(
+        "accept_board",
+        "leave_association",
+        "explore",
+        "find_1_3",
+        "talk_on_stage",
+        "skip_story",
+        "talk_on_stage",
+        "skip_story",
+        "battle",
+        "claim",
+    ),
+    summary=(
+        "史莱姆入侵：莉莉托斯协会接取的低级战斗委托。"
+        "离开协会后点城里「探险」进莉莉托斯地区。1-3 在甜蜜幻窟上面，进入探索后无需滑动就能看到。"
+        "必须先认出地标「甜蜜幻窟」，再点它上面带任务对话圈的 1-3 旗帜。"
+        "不要点「甜蜜幻窟」，不要点气泡，不要点左边的 1-2、右边的 1-4 或其他 1-1，也不要点「扫荡」。"
+        "看不见甜蜜幻窟时，即使旗帜分很高也不点。默认视角下如果同时看不到甜蜜幻窟和带对话圈的 1-3，就停下，不要自己编滑动方向。"
+        "进 1-3 选关页后点左下「青年 / 年轻的小哥」的头像（不要点气泡、进入或扫荡），跳过剧情；"
+        "然后再点一次青年的头像并再跳过一次剧情。这条要对话两次，第二次对话后进入战斗。"
+        "这场战斗大约 12 秒，只针对这条委托；仍等到「战斗胜利」再点继续，不会把 12 秒套到其他委托上。"
+        "单条跑完不点「完成」，六次都做完后用 --live --claim 一起领。"
+        "标题和青年头像来自表格裁切并按实机尺寸估了缩放；1-3 旗帜和甜蜜幻窟沿用已有模板，1-2、1-4 来自用户提供的莉莉托斯地区图。"
+    ),
+    tier=CommissionTier.LOW,
+)
+
+
+PROTECT_REPAIRMAN = CommissionRecipe(
     quest_id="protect_repairman",
     name="保护维修工",
     kind=CommissionKind.BATTLE,
+    card_template="commission_protect_repairman",
+    log_template="commission_protect_repairman",
+    objective_template=None,
+    npc_template="npc_repair_worker",
+    objective_text="在南赛拉姆 4-2 与维修工人对话两次后战斗",
     location=NAN_SERAM,
-    tier=CommissionTier.LOW,
-    objective_text="挑战 4-2 任务",
     stage_flag_template="stage_flag_4_2",
     stage_label="4-2",
-    summary="保护维修工：图4 南赛拉姆的低级委托，挑战 4-2。流程还没实机走查，不会瞎点。",
+    awaiting_crops=frozenset(),
+    flow="nan_seram_protect_repairman",
+    steps=(
+        "accept_board",
+        "leave_association",
+        "explore",
+        "find_4_2",
+        "talk_on_stage",
+        "skip_story",
+        "talk_on_stage",
+        "skip_story",
+        "battle",
+        "skip_story",
+        "claim",
+    ),
+    summary=(
+        "保护维修工：南赛拉姆协会接取的低级战斗委托，和「收集维修材料」不是同一条，但都在 4-2 找维修工人。"
+        "离开协会后点城里「探险」进南赛拉姆地区。4-2 在地区图最右边、地下遗迹左边，"
+        "进探索后如果看不见，就往右大划（手指左滑，划到底），把右边拉进画面。"
+        "到边靠画面还动不动判断，到了右边界还没有就停下，不要自己编别的滑动方向。"
+        "必须先认出地标「地下遗迹」，再点它左边带任务对话圈的 4-2 旗帜。"
+        "不要点「地下遗迹」，不要点气泡，不要点下方的 4-1、左边的 4-3 或中间的 4-Z，也不要点「扫荡」。"
+        "看不见地下遗迹时，即使旗帜分很高也不点。"
+        "进 4-2 选关页后点左下「维修工人 / 维修升降机的大叔」的头像（不要点气泡、进入或扫荡），跳过剧情；"
+        "然后再点一次维修工人的头像并再跳过一次剧情。二次对话后进入战斗。"
+        "先打完并在胜利页点「触摸继续」，再领取战斗奖励（「获得物品」上点「触摸继续」）。领取战斗奖励之后才会出现对话，这时再点「跳过剧情」。不是看见胜利就点跳过，也不会在战斗中途或领奖前点跳过。"
+        "单条跑完不点「完成」，六次都做完后用 --live --claim 一起领。"
+        "标题来自表格裁切并按实机尺寸估了缩放；4-2 旗帜、地下遗迹和维修工人头像沿用前面「收集维修材料」已有的裁切。"
+        "这条原本就是低级，没有改成中级或高级。"
+    ),
+    tier=CommissionTier.LOW,
 )
 
-ROAD_SAFE_NAN_SERAM = _pending_recipe(
+ROAD_SAFE_NAN_SERAM = CommissionRecipe(
     quest_id="road_safe_nan_seram",
     name="保证商路畅通",
     kind=CommissionKind.BATTLE,
+    card_template="commission_road_safe_nan_seram",
+    log_template="commission_road_safe_nan_seram",
+    objective_template=None,
+    npc_template="npc_mejita",
+    objective_text="在南赛拉姆商店与梅姬塔对话，再通关 4-21 初步探索",
     location=NAN_SERAM,
-    tier=CommissionTier.LOW,
-    objective_text="挑战 4-21-1",
     stage_flag_template="stage_flag_4_21",
     stage_node="basic",
-    stage_label="4-21-1",
-    summary=(
-        "保证商路畅通（南赛拉姆）：图4 的低级委托，挑战 4-21-1。"
-        "和浪人岬那条同名委托不是同一条。流程还没实机走查，不会瞎点。"
+    stage_label="4-21",
+    awaiting_crops=frozenset(),
+    flow="nan_seram_road_safe",
+    steps=(
+        "accept_board",
+        "leave_association",
+        "enter_shop",
+        "talk_mejita",
+        "skip_story",
+        "leave_shop",
+        "explore",
+        "find_4_21",
+        "enter_4_21_basic",
+        "battle",
+        "claim",
     ),
+    summary=(
+        "保证商路畅通（南赛拉姆）：南赛拉姆协会接取的低级战斗委托，"
+        "和浪人岬那条同名委托不是同一条。单独跑时必须加 --location 南赛拉姆，"
+        "例如 .\\.venv\\Scripts\\python.exe main.py --live --quest 保证商路畅通 --location 南赛拉姆。"
+        "协会接取后离开，点城里「商店」（不点气泡、协会、酒馆或探险），"
+        "进店后点「梅姬塔 / 商店的老板娘」的头像（不点气泡，也不点「购买全部」「购买」「离开」「时装」「兑换」或「氪金」），"
+        "跳过剧情，再点「离开」回城。"
+        "然后点「探险」进南赛拉姆地区。进入探索后不用滑动就能看到 4-21，它在画面右下。"
+        "必须先认出 4-C1 左边的青顶小屋，再点它右上方带任务对话圈的 4-21 旗帜。"
+        "不要点小屋，不要点气泡，不要点左边的 4-22、更左边的 4-23、下面的 4-C1，"
+        "也不要点底部「矿洞」「回程」「探索队」，更不要点「扫荡」或「结晶矿洞」。"
+        "看不见小屋和带对话圈的 4-21 时不要自行滑动，即使旗帜分很高也不点，停下即可。"
+        "进 4-21 选关页后点「初步探索」的星星；战斗自己开始就进入战斗，出现「进入」再点「进入」。不要点「扫荡」，也不要点深入或完全探索。"
+        "单条跑完不点「完成」，六次都做完后用 --live --claim 一起领。"
+        "标题和初步探索来自表格裁切并按实机尺寸估了缩放；梅姬塔、4-21 旗帜和 4-C1 旁小屋来自用户 2026-11-20 提供的金币商店和南赛拉姆地区图。"
+        "这条原本就是低级，没有改成中级或高级。"
+    ),
+    tier=CommissionTier.LOW,
 )
 
 # 高、中、低各按从图1到图9的地区顺序。同地区里保持表中的先后。
 ALL_RECIPES: tuple[CommissionRecipe, ...] = (
     ZHAZHA_BULIN,
+    SLIME_INVASION,
     POISON_BARREL,
     HOT_SPRING,
     MAN_EATER,
@@ -577,6 +838,8 @@ ALL_RECIPES: tuple[CommissionRecipe, ...] = (
     MAKE_MEDICINE,
     ADVENTURE_SQUAD,
     ROAD_SAFE_LANGREN,
+    QUAKE_PROOF,
+    COLLECT_REPAIR,
     PROTECT_REPAIRMAN,
     ROAD_SAFE_NAN_SERAM,
 )

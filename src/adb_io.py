@@ -179,7 +179,30 @@ class AdbClicker:
     def __init__(self, device: AdbDevice) -> None:
         self.device = device
 
-    def click(self, x: int, y: int, *, hwnd: int | None = None) -> None:
+    def click(
+        self,
+        x: int,
+        y: int,
+        *,
+        hwnd: int | None = None,
+        hold_ms: int | None = None,
+    ) -> None:
+        # 进入地区时短促的 input tap 可能被忽略，改用同点滑动来按住一小会。
+        if hold_ms and int(hold_ms) > 0:
+            self.device.run(
+                [
+                    "shell",
+                    "input",
+                    "swipe",
+                    str(int(x)),
+                    str(int(y)),
+                    str(int(x)),
+                    str(int(y)),
+                    str(int(hold_ms)),
+                ]
+            )
+            logger.info("adb 稍微按住 (%d, %d) %d毫秒", int(x), int(y), int(hold_ms))
+            return
         self.device.run(["shell", "input", "tap", str(int(x)), str(int(y))])
         logger.info("adb 点击 (%d, %d)", int(x), int(y))
 

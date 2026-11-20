@@ -159,8 +159,11 @@ class ShopBuyTask(TaskBase):
                 "不会改点「兑换」「时装」「氪金」或「购买全部」。",
             )
 
+        if self._on_world_map(image_bgr, clf):
+            return self._plan_world_map(image_bgr, clf)
+
         shop = self._require(image_bgr, "city_shop")
-        if shop is not None:
+        if shop is not None and self._in_city(image_bgr):
             return self._click_result(
                 clf.scene,
                 clf,
@@ -178,9 +181,19 @@ class ShopBuyTask(TaskBase):
         )
 
     def _in_gold_shop(self, image: np.ndarray) -> bool:
-        return self._require(image, "shop_gold_title") is not None
+        if self._world_city_or_title(image) is not None:
+            return False
+        if self._require(image, "shop_gold_title") is None:
+            return False
+        # 标题单独出现不够，避免离开大地图后的中间页被当成金币商店去滑清单。
+        return any(
+            self._require(image, tid) is not None
+            for tid in ("shop_leave", "shop_tab_gold", "shop_buy", "shop_buy_disabled")
+        )
 
     def _in_shop(self, image: np.ndarray) -> bool:
+        if self._world_city_or_title(image) is not None:
+            return False
         return self._require(image, "shop_leave") is not None or self._in_gold_shop(image)
 
     def _plan_confirm(self, image: np.ndarray, clf: Classification) -> StepResult:
@@ -381,7 +394,61 @@ class ShopBuyTask(TaskBase):
                 parts.append(f"「{item.name}」还没处理完")
         return "金币商店买完了：" + "；".join(parts) + "。"
 
+    def _world_city_or_title(self, image: np.ndarray):
+        for tid in _WORLD_CITIES + ("world_aglaen", "world_crystia"):
+            match = self._require(image, tid)
+            if match is not None:
+                return match
+        return None
+
+    def _on_world_map(self, image: np.ndarray, clf: Classification) -> bool:
+        if clf.scene in {Scene.WORLD_MAP, Scene.REGION_CRYSTIA}:
+            return True
+        return self._world_city_or_title(image) is not None
+
+    def _in_city(self, image: np.ndarray) -> bool:
+        return any(
+            self._require(image, tid) is not None
+            for tid in (
+                "city_association",
+                "city_world_map",
+                "city_world_map_text",
+                "city_world_map_text_alt",
+                "city_explore",
+                "city_explore_label",
+            )
+        )
+
+    def _visible_world_cities(self, image: np.ndarray) -> list:
+        found = []
+        for tid in _WORLD_CITIES:
+            match = self._require(image, tid)
+            if match is not None:
+                found.append(match)
+        return found
+
+    def _plan_world_map(self, image: np.ndarray, clf: Classification) -> StepResult:
+        # 已经在阿格莱恩或克里斯汀大地图上时，不用「离开」换区，只点已经看见的城。
+        cities = self._visible_world_cities(image)
+        if cities:
+            target = max(cities, key=lambda m: m.score)
+            return self._click_result(
+                clf.scene,
+                clf,
+                self._with(clf, target),
+                target,
+                f"现在在大地图，点「{target.label}」进城。不要点左下「离开」。所有地区都是同一家商店。",
+            )
+        return self._halt(
+            clf,
+            "现在在大地图上，但画面里没有认出任何一座城。请把某一座城滑进画面后再跑 --live --shop。"
+            "不会在大地图上点「离开」。",
+        )
+
     def _plan_recover(self, image: np.ndarray, clf: Classification) -> StepResult:
+        if self._on_world_map(image, clf):
+            return self._plan_world_map(image, clf)
+
         bag_title = self._require(image, "ui_bag_title")
         bag_back = self._require(image, "ui_bag_back")
         if bag_title is not None and bag_back is not None:
@@ -423,39 +490,7 @@ class ShopBuyTask(TaskBase):
                 "先点「回程」，回到城里再进「商店」。",
             )
 
-        city_btns = []
-        for tid in _WORLD_CITIES:
-            match = self._require(image, tid)
-            if match is not None:
-                city_btns.append(match)
-        world = self._require(image, "world_aglaen") or self._require(image, "world_crystia")
-        if city_btns:
-            target = max(city_btns, key=lambda m: m.score)
-            return self._click_result(
-                clf.scene,
-                clf,
-                self._with(clf, target),
-                target,
-                f"现在在大地图，点「{target.label}」进城。所有地区都是同一家商店。",
-            )
-        if world is not None:
-            return self._halt(
-                clf,
-                "现在在大地图上，但画面里没有认出任何一座城。请把某一座城滑进画面后再跑 --live --shop。",
-            )
-
-        in_city = any(
-            self._require(image, tid) is not None
-            for tid in (
-                "city_association",
-                "city_world_map",
-                "city_world_map_text",
-                "city_world_map_text_alt",
-                "city_explore",
-                "city_explore_label",
-            )
-        )
-        if in_city:
+        if self._in_city(image):
             return self._halt(
                 clf,
                 "已经在城里，但没有看到「商店」。不会在城里乱滑。请把「商店」露出来后再跑。",

@@ -127,6 +127,7 @@ class DailyCommissionTask(TaskBase):
         self.pending_city = None
         self._pan_key: str | None = None
         self._match_cache: dict[str, Match | None] = {}
+        self._match_cache_image_id: int | None = None
         self.auto_sweep = False
         self.sweep = None
         self.sweep_move_next = False
@@ -136,6 +137,7 @@ class DailyCommissionTask(TaskBase):
 
     def plan(self, image_bgr: np.ndarray) -> StepResult:
         self._match_cache = {}
+        self._match_cache_image_id = id(image_bgr)
         classification = classify_scene(image_bgr, self.specs, ocr=self.ocr)
         for match in classification.matches:
             self._match_cache.setdefault(match.template_id, match)
@@ -205,7 +207,9 @@ class DailyCommissionTask(TaskBase):
             return plan_priority(self, image_bgr, classification)
         if scene in {Scene.CITY_LILITOS, Scene.CITY_TURANDON}:
             place = self._place()
-            if place and place.city_scene is not None and scene is not place.city_scene:
+            confident = navigation._confident_city_name(self, image_bgr)
+            # 只有高分或读出来的标题是另一座城时才出城。不靠刚过线的城市场景。
+            if place and confident and confident != place.name:
                 return self._plan_open_world_map(image_bgr, classification, scene)
             if multi:
                 return self._plan_multi_city(image_bgr, classification)
@@ -352,9 +356,11 @@ class DailyCommissionTask(TaskBase):
             here = other_name or "另一片区域"
             message = (
                 f"当前在「{here}」地图。点击「{place.region.inbound_tab_label}」前往「{place.region.name}」，"
-                f"再进入「{place.name}」。不要点「离开」。"
+                f"再进入「{place.name}」。不要点「离开」。稍微按住，避免点太短进不去。"
             )
-            return self._click_result(clf.scene, clf, matches, tab, message)
+            return self._click_result(
+                clf.scene, clf, matches, tab, message, hold_ms=navigation.REGION_HOLD_MS
+            )
 
         # 阿格莱恩上整块「前往克里斯汀」还没出现：先上滑到「浪人岬」，再手指从左向右把旗帜拉全。
         on_aglaen = sight is not None and sight.region.id == "aglaen"
@@ -1027,8 +1033,31 @@ class DailyCommissionTask(TaskBase):
         if received is not None:
             return received
 
-        # 已经接过（没有「接收」，或本会话已点过接收）：关详情。
+        # 「接收」或「未接取」还在，说明上一帧的点击没有接上。不要关详情，也不要离开。
         accept = self._require(image_bgr, "quest_accept")
+        if accept is not None or status_match is not None:
+            if accept is not None:
+                return self._click_result(
+                    Scene.QUEST_DETAIL,
+                    clf,
+                    matches,
+                    accept,
+                    f"接取委托「{self.recipe.name}」。「接收」还在，再点一次，确认接上后再返回。",
+                )
+            return StepResult(
+                scene=Scene.QUEST_DETAIL,
+                reason=clf.reason,
+                matches=matches,
+                action=PlannedAction(
+                    kind="wait",
+                    label="等待接收",
+                    message="详情仍显示未接取，但这一帧没有匹配到「接收」。先等下一帧，不点返回或离开。",
+                ),
+                status="skip_unknown",
+                message="任务详情还没接上，先等下一帧，不关页面。",
+            )
+
+        # 已经接过（没有「接收」，也没有「未接取」，或目标文案已出现）：关详情。
         if self.phase is Phase.ACCEPT and (accepted or accept is None):
             self.phase = Phase.GO_STAGE
         if self.phase is Phase.GO_STAGE:
@@ -1394,6 +1423,7 @@ class DailyCommissionTask(TaskBase):
         click_message: str,
         *,
         delay_sec: float | None = None,
+        hold_ms: int | None = None,
         status: str = "continue",
     ) -> StepResult:
         x, y = self._click_point(match)
@@ -1405,6 +1435,7 @@ class DailyCommissionTask(TaskBase):
             match=match,
             message=click_message,
             delay_sec=delay_sec,
+            hold_ms=hold_ms,
         )
         return StepResult(
             scene=scene,
@@ -1424,6 +1455,11 @@ class DailyCommissionTask(TaskBase):
         return (x + int(round(ox * match.scale)), y + int(round(oy * match.scale)))
 
     def _require(self, image_bgr: np.ndarray, template_id: str) -> Match | None:
+        # 缓存只对当前这一帧有效。上一帧没找到 3-20，平移后同一枚旗帜出现时必须重新认。
+        image_key = id(image_bgr)
+        if getattr(self, "_match_cache_image_id", None) != image_key:
+            self._match_cache = {}
+            self._match_cache_image_id = image_key
         if template_id in self._match_cache:
             return self._match_cache[template_id]
         spec = self.by_id.get(template_id)

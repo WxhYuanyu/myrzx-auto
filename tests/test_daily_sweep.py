@@ -11,7 +11,7 @@ from src.tasks.daily_sweep import (
     recipes_in_sweep_order,
     sweep_plan_text,
 )
-from src.tasks.locations import LANGREN, LIANHU, LILITOS
+from src.tasks.locations import LANGREN, LIANHU, LILITOS, NAN_SERAM, NAR
 from src.tasks.recipes import CommissionTier, get_recipe
 from src.vision.templates import templates_by_id
 from src.vision.types import Scene
@@ -30,7 +30,7 @@ def _paste(by_id, template_ids: tuple[str, ...], *, height: int = 800, width: in
 
 def test_manifest_keeps_shop_bag_and_new_quest_templates(templates):
     by_id = templates_by_id(templates)
-    assert len(templates) == 127
+    assert len(templates) == 185
     for template_id in (
         "city_explore_label",
         "commission_change_taste",
@@ -52,6 +52,31 @@ def test_manifest_keeps_shop_bag_and_new_quest_templates(templates):
         "shop_name_magic_iron",
         "shop_item_jade_dream",
         "shop_name_jade_dream",
+        "commission_road_safe_langren",
+        "npc_metaya",
+        "stage_flag_5_a2",
+        "stage_5_a2_basic",
+        "commission_road_blocker",
+        "npc_road_blocker",
+        "stage_flag_7_5",
+        "stage_7_5_basic",
+        "commission_quake_proof",
+        "nan_seram_crystal_cave",
+        "stage_flag_4_7",
+        "stage_flag_4_6",
+        "npc_dama",
+        "commission_make_medicine",
+        "npc_make_medicine",
+        "commission_collect_repair",
+        "nan_seram_underground_ruins",
+        "stage_flag_4_2",
+        "stage_flag_4_1",
+        "stage_flag_4_3",
+        "npc_repair_worker",
+        "commission_slime_invasion",
+        "npc_slime_youth",
+        "stage_flag_1_2",
+        "stage_flag_1_4",
     ):
         assert template_id in by_id
     assert by_id["city_shop"].scales == (0.8, 0.85, 0.9, 0.95, 1.0, 1.05, 1.1)
@@ -111,6 +136,8 @@ def test_sweep_visits_high_then_medium_then_low_by_map_number():
     high = [recipe.name for recipe in recipes_in_sweep_order(CommissionTier.HIGH)]
     assert high[:5] == ["喳喳布林入侵", "处理毒桶", "温泉治疗", "讨伐食人花", "奇怪的魔物"]
     assert high.index("奇怪的魔物") < high.index("阻碍道路的家伙")
+    assert "受困的同伴" in high
+    assert high.index("阻碍道路的家伙") < high.index("受困的同伴")
     medium = [recipe.name for recipe in recipes_in_sweep_order(CommissionTier.MEDIUM)]
     assert medium == ["换换口味", "冒险小队寻求支援", "制作药物"]
     low = [
@@ -118,6 +145,9 @@ def test_sweep_visits_high_then_medium_then_low_by_map_number():
         for recipe in recipes_in_sweep_order(CommissionTier.LOW)
     ]
     assert low == [
+        ("王城莉莉托斯", "史莱姆入侵"),
+        ("南赛拉姆", "地震防范改造"),
+        ("南赛拉姆", "收集维修材料"),
         ("南赛拉姆", "保护维修工"),
         ("南赛拉姆", "保证商路畅通"),
         ("浪人岬", "保证商路畅通"),
@@ -241,7 +271,7 @@ def test_missing_card_leaves_for_next_region_during_sweep(templates):
 
 
 def test_sweep_skips_missing_crops_and_picks_other_card_here(templates):
-    """莉安湖扫城：温泉治疗还没有标题裁切，应跳过并点本城已有裁切的「讨伐食人花」。"""
+    """莉安湖扫城：板上没有「温泉治疗」时，应跳过并点本城已有的「讨伐食人花」。缺裁切的跳过改由「冒险小队寻求支援」覆盖。"""
     by_id = templates_by_id(templates)
     board = _paste(
         by_id,
@@ -260,7 +290,6 @@ def test_sweep_skips_missing_crops_and_picks_other_card_here(templates):
     assert picked.action.kind == "click"
     assert "讨伐食人花" in (picked.action.message or picked.message or "")
     assert picked.action.label != "返回"
-    assert "hot_spring" in sweep_task.sweep.finished_ids
     assert sweep_task.sweep.completed == 0
     assert sweep_task.recipe.name == "讨伐食人花"
 
@@ -270,26 +299,25 @@ def test_sweep_leaves_when_only_uncropped_quests_remain(templates):
     by_id = templates_by_id(templates)
     board = _paste(by_id, ("commission_center_title",), height=800, width=1400)
 
-    single = DailyCommissionTask(specs=templates, recipe=get_recipe("温泉治疗"))
+    single = DailyCommissionTask(specs=templates, recipe=get_recipe("冒险小队寻求支援"))
     halted = single.plan(board)
     assert halted.status == "halt_missing"
     assert "裁切" in halted.message
 
-    sweep_task = DailyCommissionTask(specs=templates, recipe=get_recipe("处理毒桶"))
+    sweep_task = DailyCommissionTask(specs=templates, recipe=get_recipe("制作药物"))
     sweep_task.auto_sweep = True
     sweep_task.sweep = SweepState.start()
-    sweep_task.sweep.place_id = LIANHU.id
-    # 本城能认的另外两条先当作今天没有，只剩下缺裁切的「温泉治疗」。
-    sweep_task.sweep.skip(get_recipe("处理毒桶"))
-    sweep_task.sweep.skip(get_recipe("讨伐食人花"))
-    sweep_task.recipe = get_recipe("温泉治疗")
+    sweep_task.sweep.tier = CommissionTier.MEDIUM
+    sweep_task.sweep.place_id = NAR.id
+    # 纳尔本中级只登记了还缺裁切的「冒险小队寻求支援」。
+    sweep_task.recipe = get_recipe("冒险小队寻求支援")
     closed = sweep_task.plan(board)
     assert closed.status == "continue"
     assert closed.action is not None
     assert closed.action.kind == "click"
     assert closed.action.label == "返回"
     assert "换下一站" in (closed.action.message or "")
-    assert "hot_spring" in sweep_task.sweep.finished_ids
+    assert "adventure_squad" in sweep_task.sweep.finished_ids
     assert sweep_task.sweep.completed == 0
     assert sweep_task.sweep_move_next is True
 
@@ -417,3 +445,4 @@ def test_flow_battle_returns_to_stage_and_keeps_going(templates):
     assert "战斗胜利" not in (result.message or "")
     assert result.action.label != "扫荡"
     assert result.action.label != "完成"
+

@@ -22,8 +22,8 @@ logger = logging.getLogger("myrzx.interaction")
 
 
 class Clicker(Protocol):
-    def click(self, x: int, y: int, *, hwnd: int | None = None) -> None:
-        """在客户区坐标 (x, y) 单击。"""
+    def click(self, x: int, y: int, *, hwnd: int | None = None, hold_ms: int | None = None) -> None:
+        """在客户区坐标 (x, y) 单击；hold_ms 为按住时间。"""
         ...
 
 
@@ -33,7 +33,7 @@ class DryRunClicker:
     def __init__(self) -> None:
         self.history: list[tuple[int, int]] = []
 
-    def click(self, x: int, y: int, *, hwnd: int | None = None) -> None:
+    def click(self, x: int, y: int, *, hwnd: int | None = None, hold_ms: int | None = None) -> None:
         self.history.append((x, y))
         logger.info("dry-run：计划点击客户区坐标 (%d, %d)，不会发送真实点击", x, y)
 
@@ -41,7 +41,7 @@ class DryRunClicker:
 class NoOpClicker:
     """Linux 下的安全桩：拒绝真实点击。"""
 
-    def click(self, x: int, y: int, *, hwnd: int | None = None) -> None:
+    def click(self, x: int, y: int, *, hwnd: int | None = None, hold_ms: int | None = None) -> None:
         raise RuntimeError(
             f"当前系统 {sys.platform} 不能发送游戏点击。"
             "请在 Windows 上使用 --live，或改用 --dry-run。"
@@ -60,9 +60,9 @@ class WindowsClicker:
             raise RuntimeError("WindowsClicker 只能在 Windows 上创建。")
         self.hwnd = int(hwnd)
 
-    def click(self, x: int, y: int, *, hwnd: int | None = None) -> None:
+    def click(self, x: int, y: int, *, hwnd: int | None = None, hold_ms: int | None = None) -> None:
         target = int(hwnd or self.hwnd)
-        _post_click(target, x, y)
+        _post_click(target, x, y, hold_ms=hold_ms)
         time.sleep(config.ACTION_INTERVAL_SEC)
 
 
@@ -112,7 +112,7 @@ def click_and_confirm(
     return False
 
 
-def _post_click(hwnd: int, x: int, y: int) -> None:
+def _post_click(hwnd: int, x: int, y: int, hold_ms: int | None = None) -> None:
     try:
         import win32gui  # type: ignore
         import win32con  # type: ignore
@@ -123,6 +123,6 @@ def _post_click(hwnd: int, x: int, y: int) -> None:
     # lParam 打包客户区坐标
     lparam = win32api.MAKELONG(int(x), int(y))
     win32gui.PostMessage(hwnd, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, lparam)
-    time.sleep(0.02)
+    time.sleep((hold_ms or 20) / 1000.0)
     win32gui.PostMessage(hwnd, win32con.WM_LBUTTONUP, 0, lparam)
     logger.info("已向 HWND=0x%X 发送 PostMessage 单击 (%d, %d)", hwnd, x, y)

@@ -84,7 +84,7 @@ def main(argv: list[str] | None = None) -> int:
         print("购买金币商店的目标商品需要同时加上 --live。")
         return 2
     if args.live:
-        return _cmd_live(args.quest, start_phase=args.phase)
+        return _cmd_live(args.quest, location=args.location, start_phase=args.phase)
 
     if args.quest is None and not args.dry_run:
         print(sweep_plan_text(), end="")
@@ -93,7 +93,7 @@ def main(argv: list[str] | None = None) -> int:
     # 默认 dry-run
     path = Path(args.dry_run) if args.dry_run else config.DEFAULT_FIXTURE_DIR
     quest = args.quest if args.quest is not None else config.PRIORITY_COMMISSION
-    return _cmd_dry_run(path, quest)
+    return _cmd_dry_run(path, quest, location=args.location)
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -131,7 +131,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--shop",
         action="store_true",
         help="在任意一座城打开「商店」，点右下「金币」，把目标商品买空"
-        "（目前是可疑的果汁、翡翠之梦、魔铁矿）。买空是指可购数量变为 0/n"
+        "（目前是可疑的果汁、魔铁矿）。买空是指可购数量变为 0/n"
         "（不一定是 0/2，只有 1 份就是 0/1）或「购买」变灰。"
         "清单里没有的就跳过。必须与 --live 一起使用。"
         "不会点「购买全部」「兑换」「时装」「氪金」。",
@@ -145,9 +145,15 @@ def _build_parser() -> argparse.ArgumentParser:
         "--quest",
         default=None,
         help="只做这一条委托的标题。不写时，--live 会按高 / 中 / 低从图1起扫城。"
-        "「保证商路畅通」有两条，请写成「保证商路畅通」并再确认地点；"
+        "「保证商路畅通」有两条，必须再加 --location 浪人岬 或 --location 南赛拉姆。"
         "表里的「仇恨令我成长」「热情的冒险者」也会认成游戏标题。"
         "未知名称会直接停止，不会编造路线。",
+    )
+    parser.add_argument(
+        "--location",
+        default=None,
+        metavar="PLACE",
+        help="同名委托要注明地点。例如：--quest 保证商路畅通 --location 浪人岬。",
     )
     parser.add_argument(
         "--phase",
@@ -209,8 +215,8 @@ def _cmd_list_windows() -> int:
     return 0
 
 
-def _summary_for(quest_name: str) -> str:
-    recipe = get_recipe(quest_name)
+def _summary_for(quest_name: str, location: str | None = None) -> str:
+    recipe = get_recipe(quest_name, location=location)
     if recipe.summary:
         return recipe.summary
     if recipe.kind is CommissionKind.TURN_IN:
@@ -220,7 +226,7 @@ def _summary_for(quest_name: str) -> str:
     return _TASK_SUMMARY
 
 
-def _cmd_dry_run(path: Path, quest_name: str) -> int:
+def _cmd_dry_run(path: Path, quest_name: str, location: str | None = None) -> int:
     if not path.exists():
         print(f"路径不存在: {path}")
         return 2
@@ -229,13 +235,13 @@ def _cmd_dry_run(path: Path, quest_name: str) -> int:
         print(f"没有找到图片: {path}")
         return 2
     try:
-        recipe = get_recipe(quest_name)
+        recipe = get_recipe(quest_name, location=location)
     except KeyError as exc:
         print(str(exc))
         return 2
 
     task = DailyCommissionTask(recipe=recipe)
-    summary = _summary_for(quest_name)
+    summary = _summary_for(quest_name, location)
     print(f"dry-run：共 {len(images)} 张图，不会发送真实点击。")
     print(f"任务: {summary}")
     print()
@@ -276,10 +282,10 @@ def _cmd_dry_run(path: Path, quest_name: str) -> int:
     return 0
 
 
-def _cmd_live(quest_name: str | None, start_phase: str | None = None) -> int:
+def _cmd_live(quest_name: str | None, location: str | None = None, start_phase: str | None = None) -> int:
     auto_sweep = not quest_name
     try:
-        recipe = first_recipe_for_sweep() if auto_sweep else get_recipe(quest_name)
+        recipe = first_recipe_for_sweep() if auto_sweep else get_recipe(quest_name, location=location)
     except KeyError as exc:
         print(str(exc))
         return 2
@@ -309,7 +315,7 @@ def _cmd_live(quest_name: str | None, start_phase: str | None = None) -> int:
         print(f"--live：ADB {device.serial} 截图并点击，按高 / 中 / 低从图1起扫城。")
         print(sweep_plan_text(), end="")
     else:
-        summary = _summary_for(quest_name)
+        summary = _summary_for(quest_name, location)
         print(f"--live：ADB {device.serial} 截图并点击，任务「{recipe.name}」。")
         print(f"任务: {summary}")
     if start_phase:

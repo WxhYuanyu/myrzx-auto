@@ -148,3 +148,63 @@ def test_battle_wait_is_not_treated_as_stuck():
     assert result.status == "done"
     assert clicker.history == []
 
+
+
+class RecordingClicker:
+    def __init__(self) -> None:
+        self.history: list[tuple] = []
+
+    def click(self, x: int, y: int, *, hwnd: int | None = None) -> None:
+        self.history.append(("click", x, y))
+
+    def swipe(self, x: int, y: int, x2: int, y2: int, *, hwnd: int | None = None) -> None:
+        self.history.append(("swipe", x, y, x2, y2))
+
+
+def _shop_swipe() -> StepResult:
+    return StepResult(
+        scene=Scene.UNKNOWN,
+        reason="",
+        action=PlannedAction(
+            kind="swipe",
+            label="向上滑动商店清单",
+            x=540,
+            y=1344,
+            x2=540,
+            y2=1184,
+        ),
+        status="continue",
+    )
+
+
+class ShiftingGrab:
+    """每次截图整体变亮一点，模拟清单还在往下走。"""
+
+    def __init__(self) -> None:
+        self.n = 0
+
+    def __call__(self) -> np.ndarray:
+        frame = np.full((64, 64, 3), min(255, self.n * 20), dtype=np.uint8)
+        self.n += 1
+        return frame
+
+
+def test_repeated_shop_swipe_continues_while_list_still_moves():
+    done = StepResult(scene=Scene.UNKNOWN, reason="", action=None, status="done", message="买完了")
+    task = ScriptedTask([_shop_swipe()] * 12 + [done])
+    clicker = RecordingClicker()
+    result = run_live(task, ShiftingGrab(), clicker, sleep=lambda _s: None, timeout_sec=5)
+    assert result.status == "done"
+    assert result.message == "买完了"
+    assert len(clicker.history) == 12
+    assert all(item[0] == "swipe" for item in clicker.history)
+
+
+def test_repeated_shop_swipe_stops_only_when_frame_is_unchanged():
+    task = StickyTask(_shop_swipe())
+    clicker = RecordingClicker()
+    result = run_live(task, _grab, clicker, sleep=lambda _s: None, timeout_sec=5)
+    assert result.status == "stuck"
+    assert "清单" in result.message
+    # 第 1 次滑动 same_streak=0，连滑 4 次画面不变后第 5 次规划才停，实际执行 4 次。
+    assert len(clicker.history) == 4

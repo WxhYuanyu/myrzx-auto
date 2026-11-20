@@ -29,10 +29,14 @@ class PlannedAction:
     match: Match | None = None
     message: str = ""
     delay_sec: float | None = None
+    hold_ms: int | None = None
 
     def brief(self) -> str:
         if self.kind == "click" and self.x is not None and self.y is not None:
-            text = f"点击「{self.label}」@ ({self.x}, {self.y})"
+            if self.hold_ms:
+                text = f"稍微按住「{self.label}」@ ({self.x}, {self.y}) {self.hold_ms / 1000:.1f}秒"
+            else:
+                text = f"点击「{self.label}」@ ({self.x}, {self.y})"
             if self.delay_sec:
                 text += f"，随后等待 {self.delay_sec:.1f} 秒"
             return text

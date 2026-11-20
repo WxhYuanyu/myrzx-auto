@@ -57,6 +57,7 @@ def run_live(
     same_streak = 0
     last_key: tuple | None = None
     last_result: StepResult | None = None
+    last_frame_sig: np.ndarray | None = None
 
     while now() < deadline:
         if max_steps is not None and steps >= max_steps:
@@ -65,6 +66,7 @@ def run_live(
             return LiveRunResult("timeout", message, steps, last_result, history)
 
         frame = grab()
+        frame_sig = _frame_signature(frame)
         result = task.plan(frame)
         last_result = result
         steps += 1
@@ -93,10 +95,20 @@ def run_live(
             action.y if action else None,
         )
         if key == last_key:
-            same_streak += 1
+            # 商店清单、背包、地图找边界都会反复发出同一条滑动。
+            # 只有画面也几乎没变，才算卡住；清单还在动时不能提前停。
+            if (
+                action is not None
+                and action.kind == "swipe"
+                and _frame_moved(last_frame_sig, frame_sig)
+            ):
+                same_streak = 0
+            else:
+                same_streak += 1
         else:
             same_streak = 0
             last_key = key
+        last_frame_sig = frame_sig
 
         if result.status in {"halt_missing", "unknown"}:
             miss_streak += 1
@@ -160,7 +172,10 @@ def run_live(
                 )
                 emit(message)
                 return LiveRunResult("stuck", message, steps, result, history)
-            clicker.click(action.x, action.y)
+            click_kwargs = {}
+            if getattr(action, "hold_ms", None):
+                click_kwargs["hold_ms"] = action.hold_ms
+            clicker.click(action.x, action.y, **click_kwargs)
             sleep(action.delay_sec or config.ACTION_INTERVAL_SEC)
             continue
 
@@ -176,7 +191,11 @@ def run_live(
                 emit(message)
                 return LiveRunResult("halted", message, steps, result, history)
             if same_streak >= config.LIVE_STUCK_LIMIT:
-                message = "地图滑动多次后仍看不到目标，已停止。"
+                label = action.label or ""
+                if any(word in label for word in ("清单", "商店", "背包")):
+                    message = "清单滑动多次后画面没有变化，已停止。"
+                else:
+                    message = "地图滑动多次后仍看不到目标，已停止。"
                 emit(message)
                 return LiveRunResult("stuck", message, steps, result, history)
             swipe(action.x, action.y, action.x2, action.y2)
@@ -190,6 +209,24 @@ def run_live(
     message = f"在 {timeout_sec:.0f} 秒内没有完成委托，已停止。"
     emit(message)
     return LiveRunResult("timeout", message, steps, last_result, history)
+
+
+def _frame_signature(frame: np.ndarray) -> np.ndarray | None:
+    if frame is None or getattr(frame, "size", 0) == 0:
+        return None
+    gray = frame if frame.ndim == 2 else frame.mean(axis=2)
+    step_y = max(1, gray.shape[0] // 48)
+    step_x = max(1, gray.shape[1] // 32)
+    return gray[::step_y, ::step_x]
+
+
+def _frame_moved(previous: np.ndarray | None, current: np.ndarray | None) -> bool:
+    if previous is None or current is None:
+        return True
+    if previous.shape != current.shape:
+        return True
+    diff = float(np.mean(np.abs(previous.astype(np.int16) - current.astype(np.int16))))
+    return diff >= 6.0
 
 
 def _format_step(steps: int, result: StepResult) -> str:

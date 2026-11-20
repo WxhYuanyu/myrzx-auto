@@ -39,6 +39,10 @@ from src.vision.types import Match, Scene
 # 传送门文案带箭头，绝不是退回按钮。
 PORTAL_EXAMPLES = ("雨林之底→", "冥土之国→", "←深海之城")
 
+# 进入地区：大地图上的地名、城里「探险」、「前往克里斯汀」稍微按住约 0.5 秒。
+# 不是按着不放，也不用于协会、大地图、离开、接收或关卡旗帜。
+REGION_HOLD_MS = 500
+
 _STAGE_PREP_RE = re.compile(r"\d+-\d+|近郊|巡逻走廊|选关|副本")
 
 _SUBTITLE_CITY = {
@@ -185,6 +189,10 @@ def read_heading(task: Any, image: np.ndarray) -> Heading | None:
     reader = _reader_heading(task, image)
     if reader is not None:
         return reader
+    # 城市场景标题必须高分或读出来才算。city_capital_subtitle 在浪人岬
+    # 城里曾经只有 0.756，若在这里当成「王城莉莉托斯」，就会去点「大地图」。
+    if best is not None and best.kind == "city":
+        return None
     return best
 
 
@@ -204,18 +212,10 @@ def _town_name_from_titles(task: Any, image: np.ndarray) -> str | None:
 
 
 def confirmed_city_name(task: Any, image: np.ndarray, clf: Any) -> str | None:
-    """当前城名。只认标题栏或已经由标题模板定下的城市场景，不认「协会」。"""
-    named = _town_name_from_titles(task, image)
-    if named:
-        return named
-    heading = read_heading(task, image)
-    if heading is not None and heading.kind == "city":
-        return heading.title
-    if clf.scene is Scene.CITY_TURANDON:
-        return "图兰顿沙漠"
-    if clf.scene is Scene.CITY_LILITOS:
-        return "王城莉莉托斯"
-    return None
+    """当前城名。只认高分招牌或读出来的标题，不把刚过线的城市场景当成定论。"""
+    # clf.scene 为 CITY_LILITOS / CITY_TURANDON 时，可能只是副标题刚过 0.75。
+    # 浪人岬城里因此被认成王城，接取后又去点「大地图」。
+    return _confident_city_name(task, image)
 
 
 CITY_WIDGETS = (
@@ -232,17 +232,78 @@ def in_city(task: Any, image: np.ndarray) -> bool:
     return verbs.best_of(task, image, CITY_WIDGETS) is not None
 
 
+def _heading_city_name(heading: Heading | None) -> str | None:
+    if heading is None or heading.kind != "city":
+        return None
+    return heading.title
+
+
+def _confident_city_name(task: Any, image: np.ndarray) -> str | None:
+    """只有高分招牌或读出来的标题，才用来否定刚点进的城。低分误匹配不算。"""
+    reader = _reader_heading(task, image)
+    if reader is not None and reader.kind == "city":
+        return reader.title
+    best_name: str | None = None
+    best_score = 0.0
+    for template_id, title, subtitle, kind in _HEADING_TEMPLATES:
+        if kind != "city" or template_id not in task.by_id:
+            continue
+        match = task._require(image, template_id)
+        if match is not None and match.score >= 0.90 and match.score > best_score:
+            best_name = title
+            best_score = match.score
+    for place in PLACES:
+        template_id = place.city_title_template
+        if not template_id or template_id not in task.by_id:
+            continue
+        match = task._require(image, template_id)
+        if match is not None and match.score >= 0.90 and match.score > best_score:
+            best_name = place.name
+            best_score = match.score
+    return best_name
+
+
 def city_is_target(task: Any, image: np.ndarray, clf: Any) -> bool:
     place = getattr(task.recipe, "location", None)
     if place is None:
         return False
-    named = confirmed_city_name(task, image, clf)
-    if named and named != place.name:
+    pending = getattr(task, "pending_city", None)
+    confident = _confident_city_name(task, image)
+    # 刚从大地图点进这座城。浪人岬还没有城内招牌裁切时，其他城招牌的低分
+    # 误匹配不能把人赶去点「大地图」。只有高分或读出来的标题明确是另一座城
+    # 时才否定。
+    if in_city(task, image) and pending == place.name:
+        if confident and confident != place.name:
+            return False
+        return True
+    if confident == place.name:
+        return True
+    if confident and confident != place.name:
         return False
+    named = confirmed_city_name(task, image, clf)
     if named == place.name:
         return True
-    # 刚在区域地图上点过这座城，下一张城内图就按它处理。标题若写成别的城则上面已经否掉。
-    return in_city(task, image) and getattr(task, "pending_city", None) == place.name
+    return False
+
+
+def _inside_target_area(
+    task: Any, image: np.ndarray, clf: Any, heading: Heading | None
+) -> bool:
+    """已经进了目标城，或进了这座城对应的地区图（例如「浪人岬地区」）。"""
+    place = _target(task)
+    if place is None:
+        return False
+    if city_is_target(task, image, clf):
+        return True
+    if heading is None:
+        return False
+    if heading.kind == "city" and heading.title == place.name:
+        return True
+    if heading.kind == "region_stage" and (
+        heading.title == f"{place.name}地区" or heading.title.startswith(place.name)
+    ):
+        return True
+    return False
 
 
 def _halt(clf: Any, scene: Scene, label: str, message: str) -> StepResult:
@@ -307,12 +368,9 @@ def _target(task: Any) -> MapPlace | None:
 
 
 def _city_name(heading: Heading | None, clf: Any) -> str | None:
+    # 不靠 clf.scene。CITY_LILITOS 经常是低分副标题误匹配。
     if heading is not None and heading.kind == "city":
         return heading.title
-    if clf.scene is Scene.CITY_TURANDON:
-        return "图兰顿沙漠"
-    if clf.scene is Scene.CITY_LILITOS:
-        return "王城莉莉托斯"
     return None
 
 
@@ -451,12 +509,9 @@ def _return_until_continent(
     left = _click_corner_leave(task, image, clf)
     if left is not None:
         return left
-    city = _city_name(heading, clf)
-    if city is not None or clf.scene in {Scene.CITY_LILITOS, Scene.CITY_TURANDON}:
-        return task._plan_open_world_map(
-            image, clf, clf.scene, here=city, returning=True
-        )
-    if find_city_world_map(task, image) is not None:
+    city = _city_name(heading, clf) or _confident_city_name(task, image)
+    # 退回大地图时，凭城里共用按钮即可，不把刚过线的城市场景当成「已确认在王城」。
+    if city is not None or in_city(task, image) or find_city_world_map(task, image) is not None:
         return task._plan_open_world_map(
             image, clf, clf.scene, here=city, returning=True
         )
@@ -687,8 +742,36 @@ def step(task: Any, image: np.ndarray, clf: Any) -> StepResult | None:
     ):
         return None
     heading = read_heading(task, image)
-    if recognize_region(task, image) is not None or _on_continent(heading, clf):
+    # 城里出现「协会 / 大地图 / 探险」就不是大地图。浪人岬城内招牌
+    # 可能被判成 WORLD_MAP，不能因此又去滑大地图、再点一次「浪人岬」。
+    on_world = _on_continent(heading, clf) and not in_city(task, image)
+    sight = recognize_region(task, image)
+    if sight is not None or on_world:
         task.saw_continent = True
+    # 已经进了目标城或目标地区时，不要再把城内招牌 / 地区里的「浪人岬」
+    # 当成大地图地名去点，更不要点「大地图」或「回程」退回去造成进进出出。
+    # 接取前先回大地图的规则，只在还没见过阿格莱恩/克里斯汀时生效。
+    inside = _inside_target_area(task, image, clf, heading)
+    if inside and not on_world:
+        saw = getattr(task, "saw_continent", False)
+        if task.phase is Phase.ACCEPT and saw and _in_target_association_room(task, image):
+            return None
+        if clf.scene is Scene.ASSOCIATION:
+            return None
+        if task.phase is Phase.ACCEPT and (
+            saw or getattr(task, "pending_city", None) == getattr(_target(task), "name", None)
+        ):
+            if in_city(task, image) or city_is_target(task, image, clf):
+                task.saw_continent = True
+                place = _target(task)
+                return _click_city_association(
+                    task, image, clf, place.name if place is not None else "目标城"
+                )
+            # 已经在「浪人岬地区」这类目标地区图上：交给任务流程，不要回程出图。
+            return None
+        if task.phase is not Phase.ACCEPT:
+            return None
+    if on_world or (sight is not None and not inside):
         return task._plan_region_to_place(image, clf)
     saw = getattr(task, "saw_continent", False)
     if task.phase is Phase.ACCEPT and saw and _in_target_association_room(task, image):
@@ -825,6 +908,62 @@ def _swipe(image: np.ndarray, direction: str) -> PlannedAction:
     return PlannedAction(kind="swipe", label=label, x=x1, y=y1, x2=x2, y2=y2)
 
 
+def _light_swipe(image: np.ndarray, direction: str) -> PlannedAction:
+    """轻轻划：从屏幕中间划到边缘。大划才是划到底，不要用这个去划到底。"""
+    height, width = image.shape[:2]
+    mid_x, mid_y = width // 2, height // 2
+    edge_x = max(8, int(width * 0.04))
+    edge_y = max(8, int(height * 0.04))
+    if direction == "east":
+        # 手指从中间往左滑到左边缘，屏幕内容往右。
+        label, x1, y1, x2, y2 = "向左轻轻滑动地图", mid_x, mid_y, edge_x, mid_y
+    elif direction == "west":
+        label, x1, y1, x2, y2 = "向右轻轻滑动地图", mid_x, mid_y, width - edge_x, mid_y
+    elif direction == "south":
+        label, x1, y1, x2, y2 = "向上轻轻滑动地图", mid_x, mid_y, mid_x, edge_y
+    elif direction == "north":
+        label, x1, y1, x2, y2 = "向下轻轻滑动地图", mid_x, mid_y, mid_x, height - edge_y
+    else:
+        raise ValueError(direction)
+    return PlannedAction(kind="swipe", label=label, x=x1, y=y1, x2=x2, y2=y2)
+
+
+def _edge_to_center_swipe(image: np.ndarray, direction: str) -> PlannedAction:
+    """从边缘划到中间。轻轻划才是从中间划到边缘，不要用错。"""
+    height, width = image.shape[:2]
+    mid_x, mid_y = width // 2, height // 2
+    edge_x = max(8, int(width * 0.04))
+    edge_y = max(8, int(height * 0.04))
+    if direction == "west":
+        # 手指从左边缘滑到中间，屏幕内容往右。
+        label, x1, y1, x2, y2 = "从左边缘向中间滑动地图", edge_x, mid_y, mid_x, mid_y
+    elif direction == "east":
+        label, x1, y1, x2, y2 = "从右边缘向中间滑动地图", width - edge_x, mid_y, mid_x, mid_y
+    elif direction == "south":
+        label, x1, y1, x2, y2 = "从上边缘向中间滑动地图", mid_x, edge_y, mid_x, mid_y
+    elif direction == "north":
+        label, x1, y1, x2, y2 = "从下边缘向中间滑动地图", mid_x, height - edge_y, mid_x, mid_y
+    else:
+        raise ValueError(direction)
+    return PlannedAction(kind="swipe", label=label, x=x1, y=y1, x2=x2, y2=y2)
+
+
+def _right_to_left_edge_swipe(image: np.ndarray) -> PlannedAction:
+    """手指从屏幕右边缘滑到左边缘，屏幕内容往右。只给需要这一下的委托用，不要改成从中间划，也不要用大划。"""
+    height, width = image.shape[:2]
+    mid_y = height // 2
+    edge_x = max(8, int(width * 0.04))
+    return PlannedAction(
+        kind="swipe",
+        label="从右边缘向左边缘滑动地图",
+        x=width - edge_x,
+        y=mid_y,
+        x2=edge_x,
+        y2=mid_y,
+    )
+
+
+
 def _pan_message(place: MapPlace, direction: str, index: int) -> str:
     side = {
         "west": "西侧",
@@ -852,8 +991,9 @@ def click_or_pan_to_place(
 ) -> StepResult:
     """已经站在正确的大区地图上：看见地名就点，看不见就平移，不猜坐标。
 
-    「浪人岬」不走地标方向。不论从哪一块出发，都先向下滑到下边界，
-    再只向右滑到右边界，然后才认名字。别的地点仍用地标。
+    「浪人岬」在阿格莱恩右下角，不走地标方向。不论从哪一块出发，
+    都先把南边拉进画面（手指上滑）直到下边界，再把东边拉进画面（手指左滑）
+    直到右边界，然后才认名字。别的地点仍用地标。
     """
     if place.id == "langren":
         return _search_langren_corner(task, image, clf, place)
@@ -869,7 +1009,8 @@ def click_or_pan_to_place(
             clf,
             matches,
             label,
-            f"左上角是「{place.region.name}」。点击「{place.name}」进入。",
+            f"左上角是「{place.region.name}」。稍微按住「{place.name}」进入，避免点太短进不去。",
+            hold_ms=REGION_HOLD_MS,
         )
 
     if not can_recognize_name(task, place):
@@ -909,7 +1050,7 @@ def click_or_pan_to_place(
 
 
 def _search_langren_corner(task: Any, image: np.ndarray, clf: Any, place: MapPlace) -> StepResult:
-    """阿格莱恩上找「浪人岬」：先向下到底，再只向右到头，然后才点名字。"""
+    """阿格莱恩上找「浪人岬」：先把南边拉到下沿，再把东边拉到右沿，然后才点名字。"""
     matches = list(clf.matches)
     phase = getattr(task, "_langren_phase", "down")
     if phase == "look":
@@ -937,8 +1078,8 @@ def _search_langren_corner(task: Any, image: np.ndarray, clf: Any, place: MapPla
             task._langren_swipes = 1
             action = _langren_swipe(image, "right", 1)
             action.message = (
-                "地图向下已经到下边界（画面不再移动）。接下来只向右滑动，直到右边界。"
-                "不再上下滑动。"
+                "地图已经到下边界（画面不再移动）。浪人岬在右下角，"
+                "接下来只把右边拉进画面（手指左滑），直到右边界。不再上下滑动。"
             )
             return _swipe_result(clf, place, matches, action)
         task._langren_phase = "look"
@@ -966,7 +1107,8 @@ def _finish_langren(task, image, clf, place, matches) -> StepResult:
             clf,
             matches,
             label,
-            "已到达阿格莱恩地图右下角。点击「浪人岬」进入。",
+            "已到达阿格莱恩地图右下角。稍微按住「浪人岬」进入，避免点太短进不去。",
+            hold_ms=REGION_HOLD_MS,
         )
     missing = (
         "已到达阿格莱恩地图右下角，仍然没有看到「浪人岬」，已停止。"
@@ -986,17 +1128,19 @@ def _langren_cap(clf, place, matches, phase: str) -> StepResult:
 
 def _langren_swipe(image: np.ndarray, phase: str, index: int) -> PlannedAction:
     if phase == "right":
-        action = _swipe(image, "west")
+        # 手指左滑，把地图东侧（右边）拉进画面。不要理解成手指往右滑。
+        action = _swipe(image, "east")
         action.message = (
-            "已经在地图下边界。只向右滑动，直到右边界。"
-            f"第 {index} 次向右。不要再上下滑动。"
+            "已经到了地图下沿。浪人岬在右下角，接下来只把右边拉进画面（手指左滑），"
+            f"直到右边界。第 {index} 次。不要再上下滑动。"
         )
         return action
-    action = _swipe(image, "north")
+    # 手指上滑，把地图南侧（下沿）拉进画面。不要理解成手指往下划。
+    action = _swipe(image, "south")
     action.message = (
-        "在阿格莱恩大地图上找「浪人岬」。先向下滑动，直到地图到达下边界。"
-        "这一帧地图还在移动，继续向下，不同时左右滑动。"
-        f"第 {index} 次向下。"
+        "浪人岬在阿格莱恩右下角。先把南边拉进画面（手指上滑），直到地图到达下边界。"
+        "这一帧地图还在移动，继续向南，不同时左右滑动。"
+        f"第 {index} 次向南。"
     )
     return action
 
